@@ -2,7 +2,7 @@
 
 import { ExternalLink } from "lucide-react";
 
-const SCORE_KEYS = ["Conexão/Rapport", "Apres. Autoridade", "Entendimento Dores", "Apres. Solução", "Agendamento"];
+const SCORE_KEYS = ["Adesão ao Script", "Conexão/Rapport", "Apres. Autoridade", "Entendimento Dores", "Apres. Solução", "Pitch", "Negociação", "Fechamento", "Confiança", "CTA", "Objeções"];
 
 function formatDateTime(value) {
     if (!value) return "—";
@@ -26,27 +26,34 @@ function formatDateTime(value) {
     return raw;
 }
 
-function getMeetingBadge(value) {
-    const v = (value || "").toUpperCase();
-    const yes = v === "TRUE" || v === "SIM" || v === "YES";
-    const color = yes
+function getStatusBadge(value) {
+    const v = (value || "").toLowerCase();
+    const isClosed = v.includes("fechad");
+    const isPending = v.includes("pendent") || v.includes("negociaç");
+    const color = isClosed
         ? "bg-emerald-500/20 text-emerald-100 border-emerald-300/35"
+        : isPending
+        ? "bg-amber-500/20 text-amber-100 border-amber-300/35"
         : "bg-red-500/20 text-red-100 border-red-300/35";
     return (
-        <span className={`px-2 py-1 rounded-md text-xs font-medium border ${color}`}>
-            {yes ? "Sim" : "Não"}
-        </span>
+        <div className={`px-3 py-1.5 rounded-md text-sm font-medium border w-fit max-w-[280px] ${color}`}>
+            {value || "—"}
+        </div>
     );
 }
 
+function parseScore(v) {
+    return parseFloat(String(v ?? "").replace(",", "."));
+}
+
 function getAvgScore(row) {
-    const vals = SCORE_KEYS.map(k => parseFloat(row[k])).filter(v => !isNaN(v));
+    const vals = SCORE_KEYS.map(k => parseScore(row[k])).filter(v => !isNaN(v));
     if (vals.length === 0) return null;
     return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
 }
 
 function ScoreBar({ value }) {
-    const score = parseFloat(value);
+    const score = parseScore(value);
     if (isNaN(score)) return <span className="text-gray-600 text-xs">—</span>;
     const pct = Math.min((score / 10) * 100, 100);
     const color = score >= 7 ? "bg-emerald-500" : score >= 4 ? "bg-amber-500" : "bg-red-500";
@@ -76,10 +83,10 @@ export default function ClientTable({ data, onOpenModal }) {
                 <thead className="bg-secondary/40 text-xs uppercase text-slate-300 font-medium tracking-wider">
                     <tr>
                         <th className="px-4 py-3 rounded-tl-lg">Data</th>
-                        <th className="px-4 py-3">Prospect / Empresa</th>
-                        <th className="px-4 py-3">SDR</th>
-                        <th className="px-4 py-3">Reunião?</th>
-                        <th className="px-4 py-3 hidden md:table-cell">Probabilidade</th>
+                        <th className="px-4 py-3">Empresa (Cliente)</th>
+                        <th className="px-4 py-3">Closer</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3 hidden md:table-cell">Resultado Final</th>
                         <th className="px-4 py-3 hidden lg:table-cell">Score Médio</th>
                         <th className="px-4 py-3 rounded-tr-lg text-center">Doc</th>
                     </tr>
@@ -97,19 +104,22 @@ export default function ClientTable({ data, onOpenModal }) {
                                     {formatDateTime(row["Data"])}
                                 </td>
                                 <td className="px-4 py-4 font-semibold text-sky-50 group-hover:text-sky-200 transition-colors">
-                                    {row["Prospect / Empressa"]}
+                                    {row["Empresa (Cliente)"]}
                                 </td>
                                 <td className="px-4 py-4 text-slate-200 text-sm">
-                                    {row["SDR / Pré-venda"]}
+                                    {row["Closer"]}
                                 </td>
                                 <td className="px-4 py-4">
-                                    {getMeetingBadge(row["Reunião Marcada?"])}
+                                    {getStatusBadge(row["Status"])}
                                 </td>
-                                <td
-                                    className="px-4 py-4 hidden md:table-cell text-slate-300 text-xs max-w-[200px] truncate"
-                                    title={row["Probabilidade Show"]}
-                                >
-                                    {row["Probabilidade Show"] || "—"}
+                                <td className="px-4 py-4 hidden md:table-cell max-w-[260px]">
+                                    {row["Resultado Final"] ? (
+                                        <p className="text-slate-300 text-xs italic leading-relaxed line-clamp-2 border-l-2 border-sky-500/40 pl-2">
+                                            {row["Resultado Final"]}
+                                        </p>
+                                    ) : (
+                                        <span className="text-gray-600">—</span>
+                                    )}
                                 </td>
                                 <td className="px-4 py-4 hidden lg:table-cell">
                                     <ScoreBar value={avg} />
@@ -118,9 +128,9 @@ export default function ClientTable({ data, onOpenModal }) {
                                     className="px-4 py-4 text-center"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    {row["Link Documento"] ? (
+                                    {row["Transcrição Completa"] ? (
                                         <a
-                                            href={row["Link Documento"]}
+                                            href={row["Transcrição Completa"]}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="text-sky-300 hover:text-sky-100 transition-colors inline-flex justify-center"

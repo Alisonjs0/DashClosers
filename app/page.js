@@ -6,7 +6,7 @@ import SatisfactionChart from "@/components/SatisfactionChart";
 import ClientTable from "@/components/ClientTable";
 import { RefreshCcw, Search, Filter, X, ExternalLink } from "lucide-react";
 
-const DEFAULT_SHEET_URL = "https://docs.google.com/spreadsheets/d/1JhnWKiaCp-1sLx04vn4HKMiNMvSxgFu3rqvrBHUcJAU/edit?gid=0#gid=0";
+const DEFAULT_SHEET_URL = "https://docs.google.com/spreadsheets/d/1yxTJHdG1QVW04ogCigP0OZ-FL7ILTrLlUKx41ESw4ps/edit?gid=0#gid=0";
 
 // Helper to parse JSON fields from sheet cells
 function parseJsonField(value) {
@@ -32,18 +32,27 @@ function parseRowDate(value) {
         if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
     }
 
+    // Supports dd/mm/yyyy HH:mm (with time)
+    const dtMatch = raw.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})\s+(\d{2}):(\d{2})/);
+    if (dtMatch) {
+        const [, day, month, year, hour, min] = dtMatch;
+        return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(min)).getTime();
+    }
+
+    // Supports dd-mm-yyyy and dd/mm/yyyy from sheet exports
+    const match = raw.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})$/);
+    if (match) {
+        const day = Number(match[1]);
+        const month = Number(match[2]) - 1;
+        const year = Number(match[3]);
+        return new Date(year, month, day).getTime();
+    }
+
     // Supports direct ISO values if they come without wrapper
     const isoParsed = new Date(raw);
     if (!Number.isNaN(isoParsed.getTime())) return isoParsed.getTime();
 
-    // Supports dd-mm-yyyy and dd/mm/yyyy from sheet exports
-    const match = raw.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})$/);
-    if (!match) return null;
-
-    const day = Number(match[1]);
-    const month = Number(match[2]) - 1;
-    const year = Number(match[3]);
-    return new Date(year, month, day).getTime();
+    return null;
 }
 
 function formatDateTime(value) {
@@ -68,9 +77,8 @@ function formatDateTime(value) {
     return raw;
 }
 
-function isMeetingScheduled(value) {
-    const meeting = (value || "").toUpperCase();
-    return meeting === "TRUE" || meeting === "SIM" || meeting === "YES";
+function isClosed(status) {
+    return (status || "").toLowerCase().includes("fechad");
 }
 
 export default function Home() {
@@ -86,6 +94,8 @@ export default function Home() {
     const [searchTerm, setSearchTerm] = useState("");
     const [sdrFilter, setSdrFilter] = useState("all");
     const [meetingFilter, setMeetingFilter] = useState("all");
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
 
     // Modal State
     const [modalOpen, setModalOpen] = useState(false);
@@ -132,18 +142,21 @@ export default function Home() {
 
     // Derived State: Filtered Data
     const filteredData = data.filter(item => {
-        const prospect = (item["Prospect / Empressa"] || "").toLowerCase();
-        const sdr = (item["SDR / Pré-venda"] || "").toLowerCase();
-        const isScheduled = isMeetingScheduled(item["Reunião Marcada?"]);
+        const empresa = (item["Empresa (Cliente)"] || "").toLowerCase();
+        const closer = (item["Closer"] || "").toLowerCase();
+        const closed = isClosed(item["Status"]);
+        const rowDate = parseRowDate(item["Data"]);
 
-        const matchesSearch = prospect.includes(searchTerm.toLowerCase());
-        const matchesSdr = sdrFilter === "all" || sdr === sdrFilter.toLowerCase();
+        const matchesSearch = empresa.includes(searchTerm.toLowerCase());
+        const matchesSdr = sdrFilter === "all" || closer === sdrFilter.toLowerCase();
         const matchesMeeting =
             meetingFilter === "all" ||
-            (meetingFilter === "yes" && isScheduled) ||
-            (meetingFilter === "no" && !isScheduled);
+            (meetingFilter === "yes" && closed) ||
+            (meetingFilter === "no" && !closed);
+        const matchesFrom = !dateFrom || (rowDate !== null && rowDate >= new Date(dateFrom).getTime());
+        const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
 
-        return matchesSearch && matchesSdr && matchesMeeting;
+        return matchesSearch && matchesSdr && matchesMeeting && matchesFrom && matchesTo;
     }).sort((a, b) => {
         const dateA = parseRowDate(a["Data"]);
         const dateB = parseRowDate(b["Data"]);
@@ -155,14 +168,14 @@ export default function Home() {
         return dateB - dateA;
     });
 
-    // Unique SDRs for Filter Dropdown
-    const sdrs = [...new Set(data.map(item => item["SDR / Pré-venda"]).filter(Boolean))];
+    // Unique Closers for Filter Dropdown
+    const sdrs = [...new Set(data.map(item => item["Closer"]).filter(Boolean))];
 
     const sdrRanking = Object.entries(
         filteredData.reduce((acc, row) => {
-            const sdr = row["SDR / Pré-venda"] || "Não informado";
+            const sdr = row["Closer"] || "Não informado";
             if (!acc[sdr]) acc[sdr] = 0;
-            if (isMeetingScheduled(row["Reunião Marcada?"])) {
+            if (isClosed(row["Status"])) {
                 acc[sdr] += 1;
             }
             return acc;
@@ -173,7 +186,7 @@ export default function Home() {
 
     const sdrCallsRanking = Object.entries(
         filteredData.reduce((acc, row) => {
-            const sdr = row["SDR / Pré-venda"] || "Não informado";
+            const sdr = row["Closer"] || "Não informado";
             if (!acc[sdr]) acc[sdr] = 0;
             acc[sdr] += 1;
             return acc;
@@ -189,7 +202,7 @@ export default function Home() {
                 <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h1 className="impact-title text-5xl md:text-6xl text-sky-100 leading-none">
-                            Dashboard de Pré-Vendas
+                            Dashboard de Closers
                         </h1>
                         <p className="text-muted-foreground mt-2 text-slate-300 text-sm md:text-base">
                             Visão geral — {filteredData.length} de {data.length} ligações exibidas
@@ -217,7 +230,7 @@ export default function Home() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <DashboardStats data={filteredData} />
                     <div className="md:col-span-1 glass-panel camo-panel rounded-xl p-6 flex flex-col items-center justify-center border border-sky-300/20">
-                        <h3 className="w-full text-lg font-semibold mb-4 text-sky-100 text-left">Distribuição de Agendamentos</h3>
+                        <h3 className="w-full text-lg font-semibold mb-4 text-sky-100 text-left">Distribuição de Fechamentos</h3>
                         <SatisfactionChart data={filteredData} />
                     </div>
                 </div>
@@ -237,7 +250,7 @@ export default function Home() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                         <input
                             type="text"
-                            placeholder="Buscar prospect / empresa..."
+                            placeholder="Buscar empresa / closer..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 bg-secondary/45 border border-sky-300/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500/60 text-sm text-sky-50 placeholder-slate-400"
@@ -249,7 +262,7 @@ export default function Home() {
                             onChange={(e) => setSdrFilter(e.target.value)}
                             className="w-full px-4 py-2 bg-secondary/45 border border-sky-300/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500/60 text-sm appearance-none cursor-pointer text-sky-50"
                         >
-                            <option value="all" className="bg-[#1e1e1e] text-gray-300">Todos os SDRs</option>
+                            <option value="all" className="bg-[#1e1e1e] text-gray-300">Todos os Closers</option>
                             {sdrs.map(s => (
                                 <option key={s} value={s} className="bg-[#1e1e1e] text-gray-300">{s}</option>
                             ))}
@@ -263,17 +276,42 @@ export default function Home() {
                             className="w-full px-4 py-2 bg-secondary/45 border border-sky-300/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500/60 text-sm appearance-none cursor-pointer text-sky-50"
                         >
                             <option value="all" className="bg-[#1e1e1e] text-gray-300">Todas as Ligações</option>
-                            <option value="yes" className="bg-[#1e1e1e] text-gray-300">Reunião Marcada</option>
-                            <option value="no" className="bg-[#1e1e1e] text-gray-300">Sem Reunião</option>
+                            <option value="yes" className="bg-[#1e1e1e] text-gray-300">Fechados</option>
+                            <option value="no" className="bg-[#1e1e1e] text-gray-300">Não Fechados</option>
                         </select>
                         <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                    </div>
+                    <div className="flex items-center gap-2 md:col-span-2">
+                        <span className="text-xs text-slate-400 whitespace-nowrap">De</span>
+                        <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={(e) => setDateFrom(e.target.value)}
+                            className="w-full px-3 py-2 bg-secondary/45 border border-sky-300/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500/60 text-sm text-sky-50 [color-scheme:dark]"
+                        />
+                        <span className="text-xs text-slate-400 whitespace-nowrap">até</span>
+                        <input
+                            type="date"
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                            className="w-full px-3 py-2 bg-secondary/45 border border-sky-300/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500/60 text-sm text-sky-50 [color-scheme:dark]"
+                        />
+                        {(dateFrom || dateTo) && (
+                            <button
+                                onClick={() => { setDateFrom(""); setDateTo(""); }}
+                                className="shrink-0 text-slate-400 hover:text-white transition-colors"
+                                title="Limpar datas"
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
                     </div>
                 </div>
 
                 {/* Table Section */}
                 <section className="glass-panel camo-panel rounded-xl overflow-hidden">
                     <div className="flex justify-between items-center p-5 border-b border-white/5">
-                        <h2 className="impact-title text-3xl text-sky-100">Ligações de Pré-Vendas</h2>
+                        <h2 className="impact-title text-3xl text-sky-100">Ligações de Closers</h2>
                         <div className="text-xs text-gray-500">
                             {lastUpdated ? `Atualizado às ${lastUpdated.toLocaleTimeString("pt-BR")}` : "Carregue uma planilha para começar"}
                         </div>
@@ -336,7 +374,7 @@ export default function Home() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
                     <div className="bg-[#0b1224] border border-sky-300/20 rounded-xl max-w-2xl w-full max-h-[80vh] flex flex-col shadow-2xl">
                         <div className="flex justify-between items-center p-5 border-b border-white/5 shrink-0">
-                            <h3 className="impact-title text-3xl text-sky-100">Ranking de SDR por Resultados</h3>
+                            <h3 className="impact-title text-3xl text-sky-100">Ranking de Closers</h3>
                             <button
                                 onClick={() => setRankingModalOpen(false)}
                                 className="text-gray-400 hover:text-white transition-colors"
@@ -350,7 +388,7 @@ export default function Home() {
                             ) : (
                                 <div className="space-y-6">
                                     <div>
-                                        <h4 className="text-sm font-semibold text-sky-200 mb-2">Reuniões Agendadas</h4>
+                                        <h4 className="text-sm font-semibold text-sky-200 mb-2">Fechamentos</h4>
                                         <div className="space-y-2">
                                             {sdrRanking.map((item, idx) => (
                                                 <div
@@ -364,7 +402,7 @@ export default function Home() {
                                                         <span className="text-sm text-gray-200 font-medium">{item.name}</span>
                                                     </div>
                                                     <span className="text-sm text-sky-200 font-semibold">
-                                                        {item.meetings} {item.meetings === 1 ? "reunião" : "reuniões"}
+                                                        {item.meetings} {item.meetings === 1 ? "fechamento" : "fechamentos"}
                                                     </span>
                                                 </div>
                                             ))}
@@ -414,9 +452,9 @@ export default function Home() {
                         {/* Modal Header */}
                         <div className="flex justify-between items-start p-6 border-b border-white/5 shrink-0">
                             <div>
-                                <h3 className="impact-title text-3xl text-sky-100 leading-none">{modalRow["Prospect / Empressa"]}</h3>
+                                <h3 className="impact-title text-3xl text-sky-100 leading-none">{modalRow["Empresa (Cliente)"]}</h3>
                                 <div className="flex gap-3 mt-1 text-xs text-gray-400">
-                                    <span>SDR: <span className="text-gray-200">{modalRow["SDR / Pré-venda"]}</span></span>
+                                    <span>Closer: <span className="text-gray-200">{modalRow["Closer"]}</span></span>
                                     <span className="text-gray-600">•</span>
                                     <span>Data: <span className="text-gray-200">{formatDateTime(modalRow["Data"])}</span></span>
                                 </div>
@@ -428,20 +466,49 @@ export default function Home() {
 
                         {/* Modal Body */}
                         <div className="p-6 overflow-y-auto space-y-5 custom-scrollbar">
-                            {/* Probabilidade Show */}
-                            {modalRow["Probabilidade Show"] && (
-                                <div>
-                                    <h4 className="text-sm font-semibold text-gray-300 mb-1">Probabilidade de Show</h4>
-                                    <p className="text-sm text-gray-400 bg-white/5 rounded-lg p-3 leading-relaxed">{modalRow["Probabilidade Show"]}</p>
-                                </div>
-                            )}
+                            {/* Status + Resultado Final */}
+                            {(modalRow["Status"] || modalRow["Resultado Final"]) && (() => {
+                                const status = (modalRow["Status"] || "").toLowerCase();
+                                const isClosedStatus = status.includes("fechad");
+                                const isPending = status.includes("pendent") || status.includes("negociaç");
+                                const badgeColor = isClosedStatus
+                                    ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/40"
+                                    : isPending
+                                    ? "bg-amber-500/20 text-amber-200 border-amber-400/40"
+                                    : "bg-red-500/20 text-red-200 border-red-400/40";
+                                const cardBorder = isClosedStatus
+                                    ? "border-emerald-400/20 bg-emerald-500/5"
+                                    : isPending
+                                    ? "border-amber-400/20 bg-amber-500/5"
+                                    : "border-red-400/20 bg-red-500/5";
+                                const quoteBorder = isClosedStatus
+                                    ? "border-emerald-400/50"
+                                    : isPending
+                                    ? "border-amber-400/50"
+                                    : "border-red-400/50";
+                                return (
+                                    <div className={`border rounded-xl p-4 space-y-3 ${cardBorder}`}>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</span>
+                                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${badgeColor}`}>
+                                                {modalRow["Status"] || "—"}
+                                            </span>
+                                        </div>
+                                        {modalRow["Resultado Final"] && (
+                                            <p className={`text-sm text-slate-300 italic leading-relaxed border-l-2 pl-3 ${quoteBorder}`}>
+                                                {modalRow["Resultado Final"]}
+                                            </p>
+                                        )}
+                                    </div>
+                                );
+                            })()}
 
                             {/* Scores */}
                             <div>
                                 <h4 className="text-sm font-semibold text-gray-300 mb-2">Scores da Ligação</h4>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                    {["Conexão/Rapport", "Apres. Autoridade", "Entendimento Dores", "Apres. Solução", "Agendamento"].map(key => {
-                                        const val = parseFloat(modalRow[key]);
+                                    {["Adesão ao Script", "Conexão/Rapport", "Apres. Autoridade", "Entendimento Dores", "Apres. Solução", "Pitch", "Negociação", "Fechamento", "Confiança", "CTA", "Objeções"].map(key => {
+                                        const val = parseFloat(String(modalRow[key] ?? "").replace(",", "."));
                                         const tone = isNaN(val)
                                             ? {
                                                 text: "text-slate-400",
@@ -475,80 +542,24 @@ export default function Home() {
                                 </div>
                             </div>
 
-                            {/* Dores Identificadas */}
-                            {(() => {
-                                const dores = parseJsonField(modalRow["Dores Identificadas"]);
-                                if (!dores || dores.length === 0) return null;
-                                return (
-                                    <div>
-                                        <h4 className="text-sm font-semibold text-gray-300 mb-2">Dores Identificadas</h4>
-                                        <ul className="space-y-1">
-                                            {dores.map((d, i) => (
-                                                <li key={i} className="flex gap-2 text-sm text-gray-400">
-                                                    <span className="text-sky-400 shrink-0 mt-0.5">•</span>
-                                                    <span>{d}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                );
-                            })()}
+                            {/* Dores do Cliente */}
+                            {modalRow["Dores do Cliente"] && (
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-300 mb-2">Dores do Cliente</h4>
+                                    <p className="text-sm text-gray-400 bg-white/5 rounded-lg p-3 leading-relaxed">{modalRow["Dores do Cliente"]}</p>
+                                </div>
+                            )}
 
-                            {/* Erros Críticos */}
-                            {(() => {
-                                const erros = parseJsonField(modalRow["Erros Criticos"]);
-                                if (!erros || erros.length === 0) return null;
-                                return (
-                                    <div>
-                                        <h4 className="text-sm font-semibold text-cyan-300 mb-2">Erros Críticos</h4>
-                                        <ul className="space-y-2">
-                                            {erros.map((e, i) => (
-                                                <li key={i} className="text-sm text-gray-400 bg-cyan-500/5 border border-cyan-400/20 rounded-lg p-2 flex gap-2">
-                                                    <span className="text-cyan-300 font-bold shrink-0">{i + 1}.</span>
-                                                    <span dangerouslySetInnerHTML={{ __html: String(e).replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                );
-                            })()}
-
-                            {/* Checklist de Melhoria */}
-                            {(() => {
-                                const checklist = parseJsonField(modalRow["Checklist de Melhoria"]);
-                                if (!checklist || checklist.length === 0) return null;
-                                return (
-                                    <div>
-                                        <h4 className="text-sm font-semibold text-gray-300 mb-2">Checklist de Melhoria</h4>
-                                        {checklist.map((cat, cidx) => (
-                                            <div key={cidx} className="mb-3">
-                                                <div className="text-xs font-semibold text-sky-300 uppercase tracking-wider mb-1">{cat.categoria}</div>
-                                                <ul className="space-y-1">
-                                                    {(cat.itens || []).map((item, iidx) => (
-                                                        <li key={iidx} className="flex items-start gap-2 text-sm">
-                                                            <span className={item.concluido ? "text-sky-300" : "text-blue-300"}>
-                                                                {item.concluido ? "✓" : "○"}
-                                                            </span>
-                                                            <span className={item.concluido ? "text-gray-300" : "text-gray-400"}>{item.item}</span>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        ))}
-                                    </div>
-                                );
-                            })()}
-
-                            {/* Link Documento */}
-                            {modalRow["Link Documento"] && (
+                            {/* Transcrição Completa */}
+                            {modalRow["Transcrição Completa"] && (
                                 <a
-                                    href={modalRow["Link Documento"]}
+                                    href={modalRow["Transcrição Completa"]}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-2 text-sm text-sky-300 hover:text-sky-200 transition-colors"
                                 >
                                     <ExternalLink size={14} />
-                                    Ver Documento Completo
+                                    Ver Transcrição Completa
                                 </a>
                             )}
                         </div>

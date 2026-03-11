@@ -5,9 +5,8 @@ import { Doughnut } from "react-chartjs-2";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-function isMeetingScheduled(row) {
-    const v = (row["Reunião Marcada?"] || "").toUpperCase();
-    return v === "TRUE" || v === "SIM" || v === "YES";
+function isClosed(row) {
+    return (row["Status"] || "").toLowerCase().includes("fechad");
 }
 
 export default function SatisfactionChart({ data }) {
@@ -15,11 +14,11 @@ export default function SatisfactionChart({ data }) {
         return <div className="text-center text-gray-500 py-8">Sem dados para exibir</div>;
     }
 
-    const scheduled = data.filter(isMeetingScheduled).length;
+    const scheduled = data.filter(isClosed).length;
     const notScheduled = data.length - scheduled;
 
     const chartData = {
-        labels: ["Reunião Marcada", "Sem Reunião"],
+        labels: ["Fechado", "Não Fechado"],
         datasets: [
             {
                 data: [scheduled, notScheduled],

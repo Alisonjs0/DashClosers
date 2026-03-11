@@ -1,22 +1,25 @@
 import { Phone, CalendarCheck, TrendingUp } from "lucide-react";
 
-const SCORE_KEYS = ["Conexão/Rapport", "Apres. Autoridade", "Entendimento Dores", "Apres. Solução", "Agendamento"];
+const SCORE_KEYS = ["Adesão ao Script", "Conexão/Rapport", "Apres. Autoridade", "Entendimento Dores", "Apres. Solução", "Pitch", "Negociação", "Fechamento", "Confiança", "CTA", "Objeções"];
 
-function isMeetingScheduled(row) {
-    const v = (row["Reunião Marcada?"] || "").toUpperCase();
-    return v === "TRUE" || v === "SIM" || v === "YES";
+function isClosed(row) {
+    return (row["Status"] || "").toLowerCase().includes("fechad");
 }
 
 export default function DashboardStats({ data }) {
     const total = data.length;
 
-    const scheduled = data.filter(isMeetingScheduled).length;
+    const scheduled = data.filter(isClosed).length;
     const scheduledPct = total > 0 ? Math.round((scheduled / total) * 100) : 0;
+
+    function parseScore(v) {
+        return parseFloat(String(v ?? "").replace(",", "."));
+    }
 
     let scoreSum = 0, scoreCount = 0;
     data.forEach(row => {
         SCORE_KEYS.forEach(key => {
-            const v = parseFloat(row[key]);
+            const v = parseScore(row[key]);
             if (!isNaN(v)) { scoreSum += v; scoreCount++; }
         });
     });
@@ -31,7 +34,7 @@ export default function DashboardStats({ data }) {
             bg: "bg-sky-500/20",
         },
         {
-            title: "Reuniões Marcadas",
+            title: "Fechamentos",
             value: scheduled,
             sub: total > 0 ? `${scheduledPct}% de taxa` : null,
             icon: CalendarCheck,
