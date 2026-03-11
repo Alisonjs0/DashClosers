@@ -27,24 +27,24 @@ export default function DashboardStats({ data }) {
             title: "Total de Ligações",
             value: total,
             icon: Phone,
-            color: "text-blue-400",
-            bg: "bg-blue-500/10",
+            color: "text-sky-200",
+            bg: "bg-sky-500/20",
         },
         {
             title: "Reuniões Marcadas",
             value: scheduled,
             sub: total > 0 ? `${scheduledPct}% de taxa` : null,
             icon: CalendarCheck,
-            color: "text-emerald-400",
-            bg: "bg-emerald-500/10",
+            color: "text-cyan-200",
+            bg: "bg-cyan-500/20",
         },
         {
             title: "Score Médio",
             value: avgScore,
             sub: "Média geral das ligações",
             icon: TrendingUp,
-            color: "text-amber-400",
-            bg: "bg-amber-500/10",
+            color: "text-blue-200",
+            bg: "bg-blue-500/20",
         },
     ];
 
@@ -53,18 +53,18 @@ export default function DashboardStats({ data }) {
             {stats.map((stat, idx) => (
                 <div
                     key={idx}
-                    className="glass-panel p-6 rounded-xl flex flex-col justify-between relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-300"
+                    className="glass-panel camo-panel p-6 rounded-xl flex flex-col justify-between relative overflow-hidden group border border-sky-300/20 hover:border-sky-300/45 transition-all duration-300"
                 >
-                    <div className={`absolute top-0 right-0 w-24 h-24 ${stat.bg} rounded-bl-full -mr-4 -mt-4 opacity-50 group-hover:scale-110 transition-transform duration-500`} />
+                    <div className={`absolute top-0 right-0 w-24 h-24 ${stat.bg} rounded-bl-full -mr-4 -mt-4 opacity-70 group-hover:scale-110 transition-transform duration-500`} />
                     <div className="flex justify-between items-start z-10">
-                        <div className={`p-3 rounded-lg ${stat.bg} border border-white/5`}>
+                        <div className={`p-3 rounded-lg ${stat.bg} border border-sky-200/20`}>
                             <stat.icon className={`w-6 h-6 ${stat.color}`} />
                         </div>
                     </div>
                     <div className="mt-4 z-10">
-                        <h3 className="text-sm font-medium text-gray-400">{stat.title}</h3>
-                        <p className="text-3xl font-bold mt-1 text-white tracking-tight">{stat.value}</p>
-                        {stat.sub && <p className="text-xs text-gray-500 mt-1">{stat.sub}</p>}
+                        <h3 className="text-sm font-medium text-slate-300">{stat.title}</h3>
+                        <p className="text-3xl font-bold mt-1 text-sky-50 tracking-tight">{stat.value}</p>
+                        {stat.sub && <p className="text-xs text-slate-400 mt-1">{stat.sub}</p>}
                     </div>
                 </div>
             ))}

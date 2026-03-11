@@ -23,9 +23,9 @@ export default function SatisfactionChart({ data }) {
         datasets: [
             {
                 data: [scheduled, notScheduled],
-                backgroundColor: ["rgba(16, 185, 129, 0.8)", "rgba(239, 68, 68, 0.8)"],
-                borderColor: ["rgba(16, 185, 129, 1)", "rgba(239, 68, 68, 1)"],
-                borderWidth: 1,
+                backgroundColor: ["rgba(16, 185, 129, 0.88)", "rgba(239, 68, 68, 0.88)"],
+                borderColor: ["rgba(167, 243, 208, 1)", "rgba(254, 202, 202, 1)"],
+                borderWidth: 2,
             },
         ],
     };
@@ -36,8 +36,8 @@ export default function SatisfactionChart({ data }) {
             legend: {
                 position: "bottom",
                 labels: {
-                    color: "#e5e7eb",
-                    font: { family: "Inter" },
+                    color: "#e2e8f0",
+                    font: { family: "Space Grotesk" },
                     padding: 20,
                 },
             },

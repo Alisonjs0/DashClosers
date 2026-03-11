@@ -4,20 +4,20 @@
 
 @layer base {
   :root {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
-    --card: 224 71% 4%;
-    --card-foreground: 213 31% 91%;
-    --primary: 142.1 70.6% 45.3%; /* Emerald 500 */
-    --primary-foreground: 144.9 80.4% 10%;
-    --secondary: 222.2 47.4% 11.2%;
-    --secondary-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --ring: 142.4 71.8% 29.2%;
+    --background: 223 49% 7%;
+    --foreground: 210 60% 96%;
+    --card: 224 42% 10%;
+    --card-foreground: 210 60% 96%;
+    --primary: 211 95% 60%;
+    --primary-foreground: 220 40% 98%;
+    --secondary: 222 35% 14%;
+    --secondary-foreground: 220 40% 98%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 220 40% 98%;
+    --ring: 211 95% 60%;
     --radius: 0.75rem;
-    --border: 216 34% 17%;
-    --input: 216 34% 17%;
+    --border: 220 32% 24%;
+    --input: 220 32% 24%;
   }
 }
 
@@ -27,15 +27,87 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(circle at 12% 6%, rgba(34, 126, 255, 0.3), transparent 35%),
+      radial-gradient(circle at 88% 18%, rgba(20, 184, 166, 0.2), transparent 40%),
+      linear-gradient(145deg, #050a19 0%, #0a1424 45%, #070d18 100%);
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(circle at center, black 35%, transparent 100%);
+    z-index: -1;
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.34;
+    background-image:
+      radial-gradient(120px 80px at 8% 12%, rgba(25, 52, 103, 0.65), transparent 70%),
+      radial-gradient(180px 110px at 21% 30%, rgba(30, 72, 130, 0.55), transparent 72%),
+      radial-gradient(160px 90px at 33% 18%, rgba(19, 40, 84, 0.62), transparent 74%),
+      radial-gradient(170px 100px at 48% 36%, rgba(24, 60, 112, 0.52), transparent 70%),
+      radial-gradient(160px 85px at 63% 22%, rgba(18, 44, 90, 0.6), transparent 72%),
+      radial-gradient(200px 120px at 79% 41%, rgba(33, 77, 138, 0.54), transparent 74%),
+      radial-gradient(150px 88px at 92% 26%, rgba(16, 37, 78, 0.65), transparent 70%),
+      radial-gradient(170px 100px at 15% 72%, rgba(20, 47, 96, 0.58), transparent 73%),
+      radial-gradient(160px 90px at 41% 78%, rgba(29, 68, 124, 0.52), transparent 72%),
+      radial-gradient(190px 110px at 68% 80%, rgba(17, 42, 86, 0.62), transparent 74%),
+      radial-gradient(160px 95px at 88% 70%, rgba(30, 71, 129, 0.52), transparent 72%);
+    mix-blend-mode: soft-light;
   }
 }
 
-/* Glassmorphism utility */
 .glass-panel {
-  @apply bg-secondary/30 backdrop-blur-md border border-white/10 shadow-lg;
+  @apply bg-secondary/60 backdrop-blur-md border border-sky-300/20 shadow-xl;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
-/* Custom Scrollbar */
+.camo-panel {
+  background-image:
+    radial-gradient(90px 60px at 12% 20%, rgba(39, 82, 153, 0.22), transparent 70%),
+    radial-gradient(120px 70px at 78% 28%, rgba(37, 105, 167, 0.2), transparent 72%),
+    radial-gradient(110px 68px at 44% 82%, rgba(29, 71, 132, 0.24), transparent 70%);
+}
+
+.impact-title {
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.danger-glow {
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.25), 0 12px 28px rgba(37, 99, 235, 0.2);
+}
+
+.reveal-rise {
+  animation: revealRise 420ms ease-out both;
+}
+
+@keyframes revealRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -44,5 +116,5 @@
   @apply bg-secondary/20;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-primary/30 rounded-full hover:bg-primary/50 transition-colors;
+  @apply bg-primary/40 rounded-full hover:bg-primary/70 transition-colors;
 }

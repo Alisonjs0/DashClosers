@@ -183,29 +183,29 @@ export default function Home() {
         .sort((a, b) => b.calls - a.calls || a.name.localeCompare(b.name, "pt-BR"));
 
     return (
-        <main className="min-h-screen p-8 bg-background text-foreground">
-            <div className="max-w-7xl mx-auto space-y-8">
+        <main className="min-h-screen p-5 md:p-8 bg-background text-foreground">
+            <div className="max-w-7xl mx-auto space-y-8 reveal-rise">
                 {/* Header */}
                 <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                        <h1 className="impact-title text-5xl md:text-6xl text-sky-100 leading-none">
                             Dashboard de Pré-Vendas
                         </h1>
-                        <p className="text-muted-foreground mt-1 text-gray-400">
+                        <p className="text-muted-foreground mt-2 text-slate-300 text-sm md:text-base">
                             Visão geral — {filteredData.length} de {data.length} ligações exibidas
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setSheetModalOpen(true)}
-                            className="px-4 py-2 bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 rounded-lg transition-colors text-sm font-medium glass-panel"
+                            className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/35 text-sky-100 border border-blue-300/35 rounded-lg transition-colors text-sm font-semibold glass-panel danger-glow"
                         >
                             Conectar Planilha
                         </button>
                         <button
                             onClick={() => fetchData(sheetUrl)}
                             disabled={!sheetUrl || loading}
-                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 rounded-lg transition-colors text-sm font-medium glass-panel disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center gap-2 px-4 py-2 bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-100 border border-cyan-300/35 rounded-lg transition-colors text-sm font-semibold glass-panel disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <RefreshCcw size={16} className={loading ? "animate-spin" : ""} />
                             Atualizar
@@ -216,8 +216,8 @@ export default function Home() {
                 {/* Stats & Charts Row */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <DashboardStats data={filteredData} />
-                    <div className="md:col-span-1 glass-panel rounded-xl p-6 flex flex-col items-center justify-center">
-                        <h3 className="w-full text-lg font-semibold mb-4 text-emerald-400 text-left">Distribuição de Agendamentos</h3>
+                    <div className="md:col-span-1 glass-panel camo-panel rounded-xl p-6 flex flex-col items-center justify-center border border-sky-300/20">
+                        <h3 className="w-full text-lg font-semibold mb-4 text-sky-100 text-left">Distribuição de Agendamentos</h3>
                         <SatisfactionChart data={filteredData} />
                     </div>
                 </div>
@@ -225,7 +225,7 @@ export default function Home() {
                 <div className="flex justify-end">
                     <button
                         onClick={() => setRankingModalOpen(true)}
-                        className="px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-lg transition-colors text-sm font-medium glass-panel"
+                        className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/35 text-sky-100 border border-blue-300/35 rounded-lg transition-colors text-sm font-semibold glass-panel"
                     >
                         Ver ranking
                     </button>
@@ -240,14 +240,14 @@ export default function Home() {
                             placeholder="Buscar prospect / empresa..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-secondary/30 border border-white/10 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500/50 text-sm text-gray-200 placeholder-gray-500"
+                            className="w-full pl-10 pr-4 py-2 bg-secondary/45 border border-sky-300/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500/60 text-sm text-sky-50 placeholder-slate-400"
                         />
                     </div>
                     <div className="relative">
                         <select
                             value={sdrFilter}
                             onChange={(e) => setSdrFilter(e.target.value)}
-                            className="w-full px-4 py-2 bg-secondary/30 border border-white/10 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500/50 text-sm appearance-none cursor-pointer text-gray-300"
+                            className="w-full px-4 py-2 bg-secondary/45 border border-sky-300/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500/60 text-sm appearance-none cursor-pointer text-sky-50"
                         >
                             <option value="all" className="bg-[#1e1e1e] text-gray-300">Todos os SDRs</option>
                             {sdrs.map(s => (
@@ -260,7 +260,7 @@ export default function Home() {
                         <select
                             value={meetingFilter}
                             onChange={(e) => setMeetingFilter(e.target.value)}
-                            className="w-full px-4 py-2 bg-secondary/30 border border-white/10 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500/50 text-sm appearance-none cursor-pointer text-gray-300"
+                            className="w-full px-4 py-2 bg-secondary/45 border border-sky-300/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500/60 text-sm appearance-none cursor-pointer text-sky-50"
                         >
                             <option value="all" className="bg-[#1e1e1e] text-gray-300">Todas as Ligações</option>
                             <option value="yes" className="bg-[#1e1e1e] text-gray-300">Reunião Marcada</option>
@@ -271,16 +271,16 @@ export default function Home() {
                 </div>
 
                 {/* Table Section */}
-                <section className="glass-panel rounded-xl overflow-hidden">
+                <section className="glass-panel camo-panel rounded-xl overflow-hidden">
                     <div className="flex justify-between items-center p-5 border-b border-white/5">
-                        <h2 className="text-xl font-semibold text-emerald-400">Ligações de Pré-Vendas</h2>
+                        <h2 className="impact-title text-3xl text-sky-100">Ligações de Pré-Vendas</h2>
                         <div className="text-xs text-gray-500">
                             {lastUpdated ? `Atualizado às ${lastUpdated.toLocaleTimeString("pt-BR")}` : "Carregue uma planilha para começar"}
                         </div>
                     </div>
                     {loading ? (
                         <div className="flex justify-center items-center py-20 gap-3">
-                            <RefreshCcw className="animate-spin text-emerald-400 w-5 h-5" />
+                                <RefreshCcw className="animate-spin text-sky-300 w-5 h-5" />
                             <span className="text-gray-500 text-sm">Carregando planilha...</span>
                         </div>
                     ) : (
@@ -292,9 +292,9 @@ export default function Home() {
             {/* Modal */}
             {sheetModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-                    <div className="bg-[#1e1e1e] border border-white/10 rounded-xl max-w-xl w-full shadow-2xl">
+                    <div className="bg-[#0b1224] border border-sky-300/20 rounded-xl max-w-xl w-full shadow-2xl">
                         <div className="flex justify-between items-center p-5 border-b border-white/5">
-                            <h3 className="text-lg font-semibold text-cyan-300">Conectar Planilha</h3>
+                            <h3 className="impact-title text-3xl text-sky-100">Conectar Planilha</h3>
                             <button
                                 onClick={() => setSheetModalOpen(false)}
                                 className="text-gray-400 hover:text-white transition-colors"
@@ -310,7 +310,7 @@ export default function Home() {
                                 value={sheetInputValue}
                                 onChange={(e) => setSheetInputValue(e.target.value)}
                                 onKeyDown={(e) => e.key === "Enter" && handleLoadSheet()}
-                                className="w-full px-4 py-2 bg-secondary/30 border border-white/10 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500/50 text-sm text-gray-200 placeholder-gray-500"
+                                className="w-full px-4 py-2 bg-secondary/45 border border-sky-300/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500/60 text-sm text-sky-50 placeholder-slate-400"
                             />
                         </div>
                         <div className="p-4 border-t border-white/5 flex justify-end gap-2 bg-white/5 rounded-b-xl">
@@ -322,7 +322,7 @@ export default function Home() {
                             </button>
                             <button
                                 onClick={handleLoadSheet}
-                                className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors"
                             >
                                 Carregar Planilha
                             </button>
@@ -334,9 +334,9 @@ export default function Home() {
             {/* Ranking Modal */}
             {rankingModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-                    <div className="bg-[#1e1e1e] border border-white/10 rounded-xl max-w-2xl w-full max-h-[80vh] flex flex-col shadow-2xl">
+                    <div className="bg-[#0b1224] border border-sky-300/20 rounded-xl max-w-2xl w-full max-h-[80vh] flex flex-col shadow-2xl">
                         <div className="flex justify-between items-center p-5 border-b border-white/5 shrink-0">
-                            <h3 className="text-lg font-semibold text-emerald-300">Ranking de SDR por Reuniões Agendadas</h3>
+                            <h3 className="impact-title text-3xl text-sky-100">Ranking de SDR por Resultados</h3>
                             <button
                                 onClick={() => setRankingModalOpen(false)}
                                 className="text-gray-400 hover:text-white transition-colors"
@@ -350,7 +350,7 @@ export default function Home() {
                             ) : (
                                 <div className="space-y-6">
                                     <div>
-                                        <h4 className="text-sm font-semibold text-emerald-300 mb-2">Reuniões Agendadas</h4>
+                                        <h4 className="text-sm font-semibold text-sky-200 mb-2">Reuniões Agendadas</h4>
                                         <div className="space-y-2">
                                             {sdrRanking.map((item, idx) => (
                                                 <div
@@ -358,12 +358,12 @@ export default function Home() {
                                                     className="flex items-center justify-between bg-white/5 border border-white/5 rounded-lg px-4 py-2"
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <span className="w-7 h-7 rounded-full bg-emerald-500/15 text-emerald-300 text-xs font-bold flex items-center justify-center">
+                                                        <span className="w-7 h-7 rounded-full bg-blue-500/25 text-sky-200 text-xs font-bold flex items-center justify-center">
                                                             {idx + 1}
                                                         </span>
                                                         <span className="text-sm text-gray-200 font-medium">{item.name}</span>
                                                     </div>
-                                                    <span className="text-sm text-emerald-300 font-semibold">
+                                                    <span className="text-sm text-sky-200 font-semibold">
                                                         {item.meetings} {item.meetings === 1 ? "reunião" : "reuniões"}
                                                     </span>
                                                 </div>
@@ -372,7 +372,7 @@ export default function Home() {
                                     </div>
 
                                     <div>
-                                        <h4 className="text-sm font-semibold text-cyan-300 mb-2">Ligações Realizadas</h4>
+                                        <h4 className="text-sm font-semibold text-cyan-200 mb-2">Ligações Realizadas</h4>
                                         <div className="space-y-2">
                                             {sdrCallsRanking.map((item, idx) => (
                                                 <div
@@ -380,12 +380,12 @@ export default function Home() {
                                                     className="flex items-center justify-between bg-white/5 border border-white/5 rounded-lg px-4 py-2"
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <span className="w-7 h-7 rounded-full bg-cyan-500/15 text-cyan-300 text-xs font-bold flex items-center justify-center">
+                                                        <span className="w-7 h-7 rounded-full bg-cyan-500/25 text-cyan-200 text-xs font-bold flex items-center justify-center">
                                                             {idx + 1}
                                                         </span>
                                                         <span className="text-sm text-gray-200 font-medium">{item.name}</span>
                                                     </div>
-                                                    <span className="text-sm text-cyan-300 font-semibold">
+                                                    <span className="text-sm text-cyan-200 font-semibold">
                                                         {item.calls} {item.calls === 1 ? "ligação" : "ligações"}
                                                     </span>
                                                 </div>
@@ -410,11 +410,11 @@ export default function Home() {
             {/* Modal */}
             {modalOpen && modalRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-                    <div className="bg-[#1e1e1e] border border-white/10 rounded-xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl">
+                    <div className="bg-[#0b1224] border border-sky-300/20 rounded-xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl">
                         {/* Modal Header */}
                         <div className="flex justify-between items-start p-6 border-b border-white/5 shrink-0">
                             <div>
-                                <h3 className="text-xl font-bold text-emerald-400">{modalRow["Prospect / Empressa"]}</h3>
+                                <h3 className="impact-title text-3xl text-sky-100 leading-none">{modalRow["Prospect / Empressa"]}</h3>
                                 <div className="flex gap-3 mt-1 text-xs text-gray-400">
                                     <span>SDR: <span className="text-gray-200">{modalRow["SDR / Pré-venda"]}</span></span>
                                     <span className="text-gray-600">•</span>
@@ -442,11 +442,33 @@ export default function Home() {
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     {["Conexão/Rapport", "Apres. Autoridade", "Entendimento Dores", "Apres. Solução", "Agendamento"].map(key => {
                                         const val = parseFloat(modalRow[key]);
-                                        const color = isNaN(val) ? "text-gray-500" : val >= 7 ? "text-emerald-400" : val >= 4 ? "text-amber-400" : "text-red-400";
+                                        const tone = isNaN(val)
+                                            ? {
+                                                text: "text-slate-400",
+                                                border: "border-slate-500/25",
+                                                bg: "bg-slate-500/8",
+                                            }
+                                            : val >= 7
+                                                ? {
+                                                    text: "text-emerald-300",
+                                                    border: "border-emerald-400/30",
+                                                    bg: "bg-emerald-500/10",
+                                                }
+                                                : val >= 4
+                                                    ? {
+                                                        text: "text-amber-300",
+                                                        border: "border-amber-400/30",
+                                                        bg: "bg-amber-500/10",
+                                                    }
+                                                    : {
+                                                        text: "text-red-300",
+                                                        border: "border-red-400/30",
+                                                        bg: "bg-red-500/10",
+                                                    };
                                         return (
-                                            <div key={key} className="bg-white/5 border border-white/5 rounded-lg p-3 text-center">
-                                                <div className={`text-2xl font-bold ${color}`}>{isNaN(val) ? "—" : val}</div>
-                                                <div className="text-xs text-gray-500 mt-1 leading-tight">{key}</div>
+                                            <div key={key} className={`rounded-lg p-3 text-center border ${tone.border} ${tone.bg}`}>
+                                                <div className={`text-2xl font-bold ${tone.text}`}>{isNaN(val) ? "—" : val}</div>
+                                                <div className="text-xs text-slate-400 mt-1 leading-tight">{key}</div>
                                             </div>
                                         );
                                     })}
@@ -463,7 +485,7 @@ export default function Home() {
                                         <ul className="space-y-1">
                                             {dores.map((d, i) => (
                                                 <li key={i} className="flex gap-2 text-sm text-gray-400">
-                                                    <span className="text-emerald-500 shrink-0 mt-0.5">•</span>
+                                                    <span className="text-sky-400 shrink-0 mt-0.5">•</span>
                                                     <span>{d}</span>
                                                 </li>
                                             ))}
@@ -478,11 +500,11 @@ export default function Home() {
                                 if (!erros || erros.length === 0) return null;
                                 return (
                                     <div>
-                                        <h4 className="text-sm font-semibold text-red-400 mb-2">Erros Críticos</h4>
+                                        <h4 className="text-sm font-semibold text-cyan-300 mb-2">Erros Críticos</h4>
                                         <ul className="space-y-2">
                                             {erros.map((e, i) => (
-                                                <li key={i} className="text-sm text-gray-400 bg-red-500/5 border border-red-500/20 rounded-lg p-2 flex gap-2">
-                                                    <span className="text-red-400 font-bold shrink-0">{i + 1}.</span>
+                                                <li key={i} className="text-sm text-gray-400 bg-cyan-500/5 border border-cyan-400/20 rounded-lg p-2 flex gap-2">
+                                                    <span className="text-cyan-300 font-bold shrink-0">{i + 1}.</span>
                                                     <span dangerouslySetInnerHTML={{ __html: String(e).replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />
                                                 </li>
                                             ))}
@@ -500,11 +522,11 @@ export default function Home() {
                                         <h4 className="text-sm font-semibold text-gray-300 mb-2">Checklist de Melhoria</h4>
                                         {checklist.map((cat, cidx) => (
                                             <div key={cidx} className="mb-3">
-                                                <div className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">{cat.categoria}</div>
+                                                <div className="text-xs font-semibold text-sky-300 uppercase tracking-wider mb-1">{cat.categoria}</div>
                                                 <ul className="space-y-1">
                                                     {(cat.itens || []).map((item, iidx) => (
                                                         <li key={iidx} className="flex items-start gap-2 text-sm">
-                                                            <span className={item.concluido ? "text-emerald-400" : "text-amber-400"}>
+                                                            <span className={item.concluido ? "text-sky-300" : "text-blue-300"}>
                                                                 {item.concluido ? "✓" : "○"}
                                                             </span>
                                                             <span className={item.concluido ? "text-gray-300" : "text-gray-400"}>{item.item}</span>
@@ -523,7 +545,7 @@ export default function Home() {
                                     href={modalRow["Link Documento"]}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
+                                    className="inline-flex items-center gap-2 text-sm text-sky-300 hover:text-sky-200 transition-colors"
                                 >
                                     <ExternalLink size={14} />
                                     Ver Documento Completo
