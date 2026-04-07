@@ -1,0 +1,60 @@
+"use client";
+
+import { Search, Bell, RefreshCcw, Database } from "lucide-react";
+import { clsx } from "clsx";
+
+export default function DashboardContent({ children, loading, lastUpdated, onRefresh, onSheetSettings }) {
+  return (
+    <main className="flex-1 min-h-screen transition-all duration-300 ml-20 md:ml-64 bg-background/50 relative">
+      {/* Top Header / Search Bar */}
+      <header className="sticky top-0 z-40 h-20 bg-background/20 backdrop-blur-3xl border-b border-white/5 px-8 flex items-center justify-between">
+        <div className="flex-1 max-w-xl relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-primary transition-colors" />
+          <input
+            type="text"
+            placeholder="Pesquisar ligações, closers ou empresas..."
+            className="w-full pl-11 pr-4 py-2.5 bg-white/5 border border-white/5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 focus:bg-white/10 text-sm text-slate-200 placeholder-slate-500 transition-all"
+          />
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex flex-col items-end mr-4">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Ultima Atualização</span>
+            <span className="text-xs font-medium text-slate-300">
+              {lastUpdated ? lastUpdated.toLocaleTimeString("pt-BR") : "---"}
+            </span>
+          </div>
+
+          <button
+            onClick={onRefresh}
+            disabled={loading}
+            className="p-2.5 rounded-xl bg-white/5 border border-white/5 text-slate-400 hover:text-primary hover:bg-white/10 transition-all relative group"
+            title="Atualizar dados"
+          >
+            <RefreshCcw size={18} className={loading ? "animate-spin" : "group-hover:scale-110"} />
+          </button>
+
+          <button
+            onClick={onSheetSettings}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-all text-sm font-medium group"
+          >
+            <Database size={16} className="text-primary group-hover:scale-110" />
+            <span className="hidden sm:inline">Planilha</span>
+          </button>
+
+          <div className="w-px h-6 bg-white/10 mx-1" />
+
+          <button className="p-2.5 rounded-xl bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all relative">
+            <Bell size={18} />
+            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-primary rounded-full shadow-[0_0_8px_rgba(59,130,246,0.8)] border border-background" />
+          </button>
+        </div>
+      </header>
+
+      {/* Content Area */}
+      <div className="p-8 reveal-rise">
+        {children}
+      </div>
+    </main>
+  );
+}

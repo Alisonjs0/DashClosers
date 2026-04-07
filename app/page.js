@@ -1,103 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import DashboardContent from "@/components/DashboardContent";
 import DashboardStats from "@/components/DashboardStats";
 import SatisfactionChart from "@/components/SatisfactionChart";
 import ClientTable from "@/components/ClientTable";
-import { RefreshCcw, Search, Filter, X, ExternalLink } from "lucide-react";
-
-const DEFAULT_SHEET_URL = "https://docs.google.com/spreadsheets/d/1yxTJHdG1QVW04ogCigP0OZ-FL7ILTrLlUKx41ESw4ps/edit?gid=0#gid=0";
-
-// Helper to parse JSON fields from sheet cells
-function parseJsonField(value) {
-    if (!value) return null;
-    if (Array.isArray(value)) return value;
-    if (typeof value === "string" && (value.trim().startsWith("[") || value.trim().startsWith("{"))) {
-        try {
-            const parsed = JSON.parse(value);
-            if (Array.isArray(parsed)) return parsed;
-        } catch (e) { }
-    }
-    return null;
-}
-
-function parseRowDate(value) {
-    if (!value || typeof value !== "string") return null;
-    const raw = value.trim();
-
-    // Supports values like [DateTime: 2026-03-11T10:53:12.118-03:00]
-    const dateTimeMatch = raw.match(/^\[DateTime:\s*(.+)\]$/);
-    if (dateTimeMatch && dateTimeMatch[1]) {
-        const parsed = new Date(dateTimeMatch[1]);
-        if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
-    }
-
-    // Supports dd/mm/yyyy HH:mm (with time)
-    const dtMatch = raw.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})\s+(\d{2}):(\d{2})/);
-    if (dtMatch) {
-        const [, day, month, year, hour, min] = dtMatch;
-        return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(min)).getTime();
-    }
-
-    // Supports dd-mm-yyyy and dd/mm/yyyy from sheet exports
-    const match = raw.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})$/);
-    if (match) {
-        const day = Number(match[1]);
-        const month = Number(match[2]) - 1;
-        const year = Number(match[3]);
-        return new Date(year, month, day).getTime();
-    }
-
-    // Supports direct ISO values if they come without wrapper
-    const isoParsed = new Date(raw);
-    if (!Number.isNaN(isoParsed.getTime())) return isoParsed.getTime();
-
-    return null;
-}
-
-function formatDateTime(value) {
-    if (!value) return "—";
-    const raw = String(value).trim();
-
-    const match = raw.match(/^\[DateTime:\s*(.+)\]$/);
-    if (match && match[1]) {
-        const parsed = new Date(match[1]);
-        if (!Number.isNaN(parsed.getTime())) {
-            return parsed.toLocaleString("pt-BR", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-            });
-        }
-    }
-
-    return raw;
-}
-
-function isClosed(status) {
-    return (status || "").toLowerCase().includes("fechad");
-}
+import { useDashboardContext } from "@/lib/contexts/DashboardContext";
+import { 
+    X, Filter, Search, Trophy, TrendingUp, PhoneCall, User, 
+    Calendar, Building2, Database, ExternalLink, ShieldCheck, 
+    MousePointer2, Ban, Lightbulb, Mic2, Scale, FileText, Target, Activity, Award, Zap
+} from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
+import { clsx } from "clsx";
 
 export default function Home() {
-    const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [lastUpdated, setLastUpdated] = useState(null);
-    const [sheetUrl, setSheetUrl] = useState(DEFAULT_SHEET_URL);
-    const [sheetInputValue, setSheetInputValue] = useState(DEFAULT_SHEET_URL);
-    const [sheetModalOpen, setSheetModalOpen] = useState(false);
-    const [rankingModalOpen, setRankingModalOpen] = useState(false);
-
-    // Filter State
-    const [searchTerm, setSearchTerm] = useState("");
-    const [sdrFilter, setSdrFilter] = useState("all");
-    const [meetingFilter, setMeetingFilter] = useState("all");
-    const [dateFrom, setDateFrom] = useState("");
-    const [dateTo, setDateTo] = useState("");
+    const {
+        filteredData,
+        loading,
+        lastUpdated,
+        sheetUrl,
+        setSheetUrl,
+        sheetInputValue,
+        setSheetInputValue,
+        searchTerm,
+        setSearchTerm,
+        sdrFilter,
+        setSdrFilter,
+        meetingFilter,
+        setMeetingFilter,
+        dateFrom,
+        setDateFrom,
+        dateTo,
+        setDateTo,
+        fetchData,
+        stats,
+        ranking,
+        closers,
+    } = useDashboardContext();
 
     // Modal State
+    const [rankingModalOpen, setRankingModalOpen] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [modalRow, setModalRow] = useState(null);
 
@@ -106,476 +49,317 @@ export default function Home() {
         setModalOpen(true);
     };
 
-    const fetchData = async (url) => {
-        const targetUrl = url || sheetUrl;
-        if (!targetUrl) return;
-        setLoading(true);
-        try {
-            const res = await fetch(`/api/sheets?url=${encodeURIComponent(targetUrl)}`);
-            const jsonData = await res.json();
-            if (jsonData.error) {
-                console.error("API Error:", jsonData.error);
-            } else {
-                setData(Array.isArray(jsonData.data) ? jsonData.data : []);
-                setLastUpdated(new Date());
-            }
-        } catch (error) {
-            console.error("Failed to fetch data", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleLoadSheet = () => {
         if (!sheetInputValue.trim()) return;
         setSheetUrl(sheetInputValue.trim());
-        fetchData(sheetInputValue.trim());
-        setSheetModalOpen(false);
     };
 
-    useEffect(() => {
-        if (!sheetUrl) return;
-        fetchData(sheetUrl);
-        const interval = setInterval(() => fetchData(sheetUrl), 30000);
-        return () => clearInterval(interval);
-    }, [sheetUrl]);
-
-    // Derived State: Filtered Data
-    const filteredData = data.filter(item => {
-        const empresa = (item["Empresa (Cliente)"] || "").toLowerCase();
-        const closer = (item["Closer"] || "").toLowerCase();
-        const closed = isClosed(item["Status"]);
-        const rowDate = parseRowDate(item["Data"]);
-
-        const matchesSearch = empresa.includes(searchTerm.toLowerCase());
-        const matchesSdr = sdrFilter === "all" || closer === sdrFilter.toLowerCase();
-        const matchesMeeting =
-            meetingFilter === "all" ||
-            (meetingFilter === "yes" && closed) ||
-            (meetingFilter === "no" && !closed);
-        const matchesFrom = !dateFrom || (rowDate !== null && rowDate >= new Date(dateFrom).getTime());
-        const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
-
-        return matchesSearch && matchesSdr && matchesMeeting && matchesFrom && matchesTo;
-    }).sort((a, b) => {
-        const dateA = parseRowDate(a["Data"]);
-        const dateB = parseRowDate(b["Data"]);
-
-        // Most recent first; rows with invalid/missing dates go to the end.
-        if (dateA === null && dateB === null) return 0;
-        if (dateA === null) return 1;
-        if (dateB === null) return -1;
-        return dateB - dateA;
-    });
-
-    // Unique Closers for Filter Dropdown
-    const sdrs = [...new Set(data.map(item => item["Closer"]).filter(Boolean))];
-
-    const sdrRanking = Object.entries(
-        filteredData.reduce((acc, row) => {
-            const sdr = row["Closer"] || "Não informado";
-            if (!acc[sdr]) acc[sdr] = 0;
-            if (isClosed(row["Status"])) {
-                acc[sdr] += 1;
-            }
-            return acc;
-        }, {})
-    )
-        .map(([name, meetings]) => ({ name, meetings }))
-        .sort((a, b) => b.meetings - a.meetings || a.name.localeCompare(b.name, "pt-BR"));
-
-    const sdrCallsRanking = Object.entries(
-        filteredData.reduce((acc, row) => {
-            const sdr = row["Closer"] || "Não informado";
-            if (!acc[sdr]) acc[sdr] = 0;
-            acc[sdr] += 1;
-            return acc;
-        }, {})
-    )
-        .map(([name, calls]) => ({ name, calls }))
-        .sort((a, b) => b.calls - a.calls || a.name.localeCompare(b.name, "pt-BR"));
-
     return (
-        <main className="min-h-screen p-5 md:p-8 bg-background text-foreground">
-            <div className="max-w-7xl mx-auto space-y-8 reveal-rise">
-                {/* Header */}
-                <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h1 className="impact-title text-5xl md:text-6xl text-sky-100 leading-none">
-                            Dashboard de Closers
+        <>
+            <DashboardContent
+            loading={loading}
+            lastUpdated={lastUpdated}
+            onRefresh={() => fetchData(sheetUrl)}
+        >
+            <div className="space-y-8">
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-10">
+                    <div className="space-y-1">
+                        <h1 className="text-4xl font-black impact-title leading-tight">
+                            Performance Geral
                         </h1>
-                        <p className="text-muted-foreground mt-2 text-slate-300 text-sm md:text-base">
-                            Visão geral — {filteredData.length} de {data.length} ligações exibidas
+                        <p className="text-slate-500 font-medium flex items-center gap-2">
+                            <TrendingUp size={16} className="text-primary" />
+                            Monitoramento em tempo real de conversion closers
                         </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setSheetModalOpen(true)}
-                            className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/35 text-sky-100 border border-blue-300/35 rounded-lg transition-colors text-sm font-semibold glass-panel danger-glow"
-                        >
-                            Conectar Planilha
-                        </button>
-                        <button
-                            onClick={() => fetchData(sheetUrl)}
-                            disabled={!sheetUrl || loading}
-                            className="flex items-center gap-2 px-4 py-2 bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-100 border border-cyan-300/35 rounded-lg transition-colors text-sm font-semibold glass-panel disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <RefreshCcw size={16} className={loading ? "animate-spin" : ""} />
-                            Atualizar
-                        </button>
-                    </div>
-                </header>
-
-                {/* Stats & Charts Row */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <DashboardStats data={filteredData} />
-                    <div className="md:col-span-1 glass-panel camo-panel rounded-xl p-6 flex flex-col items-center justify-center border border-sky-300/20">
-                        <h3 className="w-full text-lg font-semibold mb-4 text-sky-100 text-left">Distribuição de Fechamentos</h3>
-                        <SatisfactionChart data={filteredData} />
-                    </div>
-                </div>
-
-                <div className="flex justify-end">
+                    
                     <button
                         onClick={() => setRankingModalOpen(true)}
-                        className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/35 text-sky-100 border border-blue-300/35 rounded-lg transition-colors text-sm font-semibold glass-panel"
+                        className="group flex items-center gap-2 px-6 py-3 bg-primary/10 border border-primary/20 rounded-2xl text-primary font-bold text-sm hover:bg-primary/20 transition-all shadow-[0_0_15px_rgba(59,130,246,0.15)]"
                     >
-                        Ver ranking
+                        <Trophy size={18} className="group-hover:scale-110 transition-transform" />
+                        Ver Ranking de Closers
                     </button>
                 </div>
 
-                {/* Filters Row */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="relative md:col-span-2">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                        <input
-                            type="text"
-                            placeholder="Buscar empresa / closer..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-secondary/45 border border-sky-300/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500/60 text-sm text-sky-50 placeholder-slate-400"
-                        />
+                {/* Stats Grid */}
+                <DashboardStats stats={stats} />
+
+                {/* Main Grid: Filters + Chart + Table */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Left Column: Filters & Chart */}
+                    <div className="lg:col-span-1 space-y-8">
+                        {/* Filter Card */}
+                        <div className="glass-card p-6 rounded-[2rem] space-y-6">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Filter size={18} className="text-primary" />
+                                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Filtros Avançados</h3>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Closer</label>
+                                    <select
+                                        value={sdrFilter}
+                                        onChange={(e) => setSdrFilter(e.target.value)}
+                                        className="w-full px-4 py-2.5 bg-white/5 border border-white/5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 text-xs text-slate-200 appearance-none cursor-pointer"
+                                    >
+                                        <option value="all" className="bg-[#0f172a]">Todos os Closers</option>
+                                        {closers.map(s => (
+                                            <option key={s} value={s} className="bg-[#0f172a]">{s}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Status da Ligação</label>
+                                    <select
+                                        value={meetingFilter}
+                                        onChange={(e) => setMeetingFilter(e.target.value)}
+                                        className="w-full px-4 py-2.5 bg-white/5 border border-white/5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 text-xs text-slate-200 appearance-none cursor-pointer"
+                                    >
+                                        <option value="all" className="bg-[#0f172a]">Todos os Status</option>
+                                        <option value="yes" className="bg-[#0f172a]">Apenas Fechados</option>
+                                        <option value="no" className="bg-[#0f172a]">Não Fechados</option>
+                                    </select>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">De</label>
+                                        <input
+                                            type="date"
+                                            value={dateFrom}
+                                            onChange={(e) => setDateFrom(e.target.value)}
+                                            className="w-full px-4 py-2 bg-white/5 border border-white/5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 text-xs text-slate-200 [color-scheme:dark]"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Até</label>
+                                        <input
+                                            type="date"
+                                            value={dateTo}
+                                            onChange={(e) => setDateTo(e.target.value)}
+                                            className="w-full px-4 py-2 bg-white/5 border border-white/5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 text-xs text-slate-200 [color-scheme:dark]"
+                                        />
+                                    </div>
+                                </div>
+
+                                {(dateFrom || dateTo || sdrFilter !== "all" || meetingFilter !== "all") && (
+                                    <button 
+                                        onClick={() => { setDateFrom(""); setDateTo(""); setSdrFilter("all"); setMeetingFilter("all"); }}
+                                        className="w-full py-2 text-[10px] uppercase font-bold text-slate-400 hover:text-white transition-colors"
+                                    >
+                                        Resetar Filtros
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Chart Card */}
+                        <div className="glass-card p-6 rounded-[2rem] flex flex-col items-center">
+                            <h3 className="w-full text-sm font-bold text-white uppercase tracking-wider mb-6 text-center">Taxa de Conversão</h3>
+                            <SatisfactionChart data={filteredData} />
+                        </div>
                     </div>
-                    <div className="relative">
-                        <select
-                            value={sdrFilter}
-                            onChange={(e) => setSdrFilter(e.target.value)}
-                            className="w-full px-4 py-2 bg-secondary/45 border border-sky-300/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500/60 text-sm appearance-none cursor-pointer text-sky-50"
-                        >
-                            <option value="all" className="bg-[#1e1e1e] text-gray-300">Todos os Closers</option>
-                            {sdrs.map(s => (
-                                <option key={s} value={s} className="bg-[#1e1e1e] text-gray-300">{s}</option>
-                            ))}
-                        </select>
-                        <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
-                    </div>
-                    <div className="relative">
-                        <select
-                            value={meetingFilter}
-                            onChange={(e) => setMeetingFilter(e.target.value)}
-                            className="w-full px-4 py-2 bg-secondary/45 border border-sky-300/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500/60 text-sm appearance-none cursor-pointer text-sky-50"
-                        >
-                            <option value="all" className="bg-[#1e1e1e] text-gray-300">Todas as Ligações</option>
-                            <option value="yes" className="bg-[#1e1e1e] text-gray-300">Fechados</option>
-                            <option value="no" className="bg-[#1e1e1e] text-gray-300">Não Fechados</option>
-                        </select>
-                        <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
-                    </div>
-                    <div className="flex items-center gap-2 md:col-span-2">
-                        <span className="text-xs text-slate-400 whitespace-nowrap">De</span>
-                        <input
-                            type="date"
-                            value={dateFrom}
-                            onChange={(e) => setDateFrom(e.target.value)}
-                            className="w-full px-3 py-2 bg-secondary/45 border border-sky-300/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500/60 text-sm text-sky-50 [color-scheme:dark]"
-                        />
-                        <span className="text-xs text-slate-400 whitespace-nowrap">até</span>
-                        <input
-                            type="date"
-                            value={dateTo}
-                            onChange={(e) => setDateTo(e.target.value)}
-                            className="w-full px-3 py-2 bg-secondary/45 border border-sky-300/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500/60 text-sm text-sky-50 [color-scheme:dark]"
-                        />
-                        {(dateFrom || dateTo) && (
-                            <button
-                                onClick={() => { setDateFrom(""); setDateTo(""); }}
-                                className="shrink-0 text-slate-400 hover:text-white transition-colors"
-                                title="Limpar datas"
-                            >
-                                <X size={14} />
-                            </button>
-                        )}
+
+                    {/* Right Column: Table */}
+                    <div className="lg:col-span-2">
+                        <section className="space-y-4">
+                             <div className="flex items-center justify-between px-4">
+                                <h2 className="text-xl font-black text-white uppercase tracking-tight italic">Registros Recentes</h2>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full border border-white/5">
+                                    {filteredData.length} entradas encontradas
+                                </span>
+                             </div>
+                            <ClientTable data={filteredData} onOpenModal={openModal} />
+                        </section>
                     </div>
                 </div>
-
-                {/* Table Section */}
-                <section className="glass-panel camo-panel rounded-xl overflow-hidden">
-                    <div className="flex justify-between items-center p-5 border-b border-white/5">
-                        <h2 className="impact-title text-3xl text-sky-100">Ligações de Closers</h2>
-                        <div className="text-xs text-gray-500">
-                            {lastUpdated ? `Atualizado às ${lastUpdated.toLocaleTimeString("pt-BR")}` : "Carregue uma planilha para começar"}
-                        </div>
-                    </div>
-                    {loading ? (
-                        <div className="flex justify-center items-center py-20 gap-3">
-                                <RefreshCcw className="animate-spin text-sky-300 w-5 h-5" />
-                            <span className="text-gray-500 text-sm">Carregando planilha...</span>
-                        </div>
-                    ) : (
-                        <ClientTable data={filteredData} onOpenModal={openModal} />
-                    )}
-                </section>
             </div>
 
-            {/* Modal */}
-            {sheetModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-                    <div className="bg-[#0b1224] border border-sky-300/20 rounded-xl max-w-xl w-full shadow-2xl">
-                        <div className="flex justify-between items-center p-5 border-b border-white/5">
-                            <h3 className="impact-title text-3xl text-sky-100">Conectar Planilha</h3>
-                            <button
-                                onClick={() => setSheetModalOpen(false)}
-                                className="text-gray-400 hover:text-white transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
+        </DashboardContent>
+
+        {/* Portals / Modals (Must stay outside animated containers to maintain fixed positioning) */}
+        {/* Ranking Modal */}
+        {rankingModalOpen && (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-[#020617]/80 backdrop-blur-md">
+                <div className="glass-card max-w-2xl w-full max-h-[80vh] flex flex-col rounded-[2.5rem] border border-white/10 relative reveal-rise overflow-hidden">
+                    <div className="flex justify-between items-center p-8 border-b border-white/5 bg-white/[0.02]">
+                        <div className="flex items-center gap-3">
+                            <Trophy size={28} className="text-amber-400" />
+                            <h3 className="text-2xl font-black text-white tracking-tight uppercase italic">Hall da Fama</h3>
                         </div>
-                        <div className="p-5 space-y-3">
-                            <label className="block text-xs text-gray-400">URL da Planilha Google Sheets</label>
-                            <input
-                                type="text"
-                                placeholder="Cole aqui o link da planilha..."
-                                value={sheetInputValue}
-                                onChange={(e) => setSheetInputValue(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleLoadSheet()}
-                                className="w-full px-4 py-2 bg-secondary/45 border border-sky-300/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500/60 text-sm text-sky-50 placeholder-slate-400"
-                            />
-                        </div>
-                        <div className="p-4 border-t border-white/5 flex justify-end gap-2 bg-white/5 rounded-b-xl">
-                            <button
-                                onClick={() => setSheetModalOpen(false)}
-                                className="px-4 py-2 bg-secondary/50 hover:bg-secondary text-white rounded-lg text-sm font-medium transition-colors border border-white/5"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleLoadSheet}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors"
-                            >
-                                Carregar Planilha
-                            </button>
-                        </div>
+                        <button onClick={() => setRankingModalOpen(false)} className="p-2 rounded-full hover:bg-white/5 text-slate-500 transition-colors">
+                            <X size={20} />
+                        </button>
                     </div>
-                </div>
-            )}
-
-            {/* Ranking Modal */}
-            {rankingModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-                    <div className="bg-[#0b1224] border border-sky-300/20 rounded-xl max-w-2xl w-full max-h-[80vh] flex flex-col shadow-2xl">
-                        <div className="flex justify-between items-center p-5 border-b border-white/5 shrink-0">
-                            <h3 className="impact-title text-3xl text-sky-100">Ranking de Closers</h3>
-                            <button
-                                onClick={() => setRankingModalOpen(false)}
-                                className="text-gray-400 hover:text-white transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <div className="p-5 overflow-y-auto custom-scrollbar">
-                            {sdrRanking.length === 0 && sdrCallsRanking.length === 0 ? (
-                                <p className="text-sm text-gray-500">Sem dados para montar o ranking.</p>
-                            ) : (
-                                <div className="space-y-6">
-                                    <div>
-                                        <h4 className="text-sm font-semibold text-sky-200 mb-2">Fechamentos</h4>
-                                        <div className="space-y-2">
-                                            {sdrRanking.map((item, idx) => (
-                                                <div
-                                                    key={`meetings-${item.name}`}
-                                                    className="flex items-center justify-between bg-white/5 border border-white/5 rounded-lg px-4 py-2"
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="w-7 h-7 rounded-full bg-blue-500/25 text-sky-200 text-xs font-bold flex items-center justify-center">
-                                                            {idx + 1}
-                                                        </span>
-                                                        <span className="text-sm text-gray-200 font-medium">{item.name}</span>
-                                                    </div>
-                                                    <span className="text-sm text-sky-200 font-semibold">
-                                                        {item.meetings} {item.meetings === 1 ? "fechamento" : "fechamentos"}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <h4 className="text-sm font-semibold text-cyan-200 mb-2">Ligações Realizadas</h4>
-                                        <div className="space-y-2">
-                                            {sdrCallsRanking.map((item, idx) => (
-                                                <div
-                                                    key={`calls-${item.name}`}
-                                                    className="flex items-center justify-between bg-white/5 border border-white/5 rounded-lg px-4 py-2"
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="w-7 h-7 rounded-full bg-cyan-500/25 text-cyan-200 text-xs font-bold flex items-center justify-center">
-                                                            {idx + 1}
-                                                        </span>
-                                                        <span className="text-sm text-gray-200 font-medium">{item.name}</span>
-                                                    </div>
-                                                    <span className="text-sm text-cyan-200 font-semibold">
-                                                        {item.calls} {item.calls === 1 ? "ligação" : "ligações"}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        <div className="p-4 border-t border-white/5 flex justify-end bg-white/5 rounded-b-xl shrink-0">
-                            <button
-                                onClick={() => setRankingModalOpen(false)}
-                                className="px-4 py-2 bg-secondary/50 hover:bg-secondary text-white rounded-lg text-sm font-medium transition-colors border border-white/5"
-                            >
-                                Fechar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Modal */}
-            {modalOpen && modalRow && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-                    <div className="bg-[#0b1224] border border-sky-300/20 rounded-xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl">
-                        {/* Modal Header */}
-                        <div className="flex justify-between items-start p-6 border-b border-white/5 shrink-0">
-                            <div>
-                                <h3 className="impact-title text-3xl text-sky-100 leading-none">{modalRow["Empresa (Cliente)"]}</h3>
-                                <div className="flex gap-3 mt-1 text-xs text-gray-400">
-                                    <span>Closer: <span className="text-gray-200">{modalRow["Closer"]}</span></span>
-                                    <span className="text-gray-600">•</span>
-                                    <span>Data: <span className="text-gray-200">{formatDateTime(modalRow["Data"])}</span></span>
-                                </div>
-                            </div>
-                            <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-white transition-colors ml-4 shrink-0">
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        {/* Modal Body */}
-                        <div className="p-6 overflow-y-auto space-y-5 custom-scrollbar">
-                            {/* Status + Resultado Final */}
-                            {(modalRow["Status"] || modalRow["Resultado Final"]) && (() => {
-                                const status = (modalRow["Status"] || "").toLowerCase();
-                                const isClosedStatus = status.includes("fechad");
-                                const isPending = status.includes("pendent") || status.includes("negociaç");
-                                const badgeColor = isClosedStatus
-                                    ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/40"
-                                    : isPending
-                                    ? "bg-amber-500/20 text-amber-200 border-amber-400/40"
-                                    : "bg-red-500/20 text-red-200 border-red-400/40";
-                                const cardBorder = isClosedStatus
-                                    ? "border-emerald-400/20 bg-emerald-500/5"
-                                    : isPending
-                                    ? "border-amber-400/20 bg-amber-500/5"
-                                    : "border-red-400/20 bg-red-500/5";
-                                const quoteBorder = isClosedStatus
-                                    ? "border-emerald-400/50"
-                                    : isPending
-                                    ? "border-amber-400/50"
-                                    : "border-red-400/50";
-                                return (
-                                    <div className={`border rounded-xl p-4 space-y-3 ${cardBorder}`}>
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</span>
-                                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${badgeColor}`}>
-                                                {modalRow["Status"] || "—"}
+                    
+                    <div className="p-8 overflow-y-auto custom-scrollbar flex-1 space-y-8">
+                        <div>
+                            <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-4">🏆 Melhores em Conversão</h4>
+                            <div className="space-y-3">
+                                {ranking.sdrRank.map((item, idx) => (
+                                    <div key={item.name} className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-2xl p-4 group hover:border-primary/30 transition-all">
+                                        <div className="flex items-center gap-4">
+                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black ${idx === 0 ? 'bg-amber-400/20 text-amber-400' : idx === 1 ? 'bg-slate-300/20 text-slate-300' : 'bg-orange-400/20 text-orange-400'}`}>
+                                                {idx + 1}
                                             </span>
+                                            <span className="text-sm font-bold text-slate-200">{item.name}</span>
                                         </div>
-                                        {modalRow["Resultado Final"] && (
-                                            <p className={`text-sm text-slate-300 italic leading-relaxed border-l-2 pl-3 ${quoteBorder}`}>
-                                                {modalRow["Resultado Final"]}
-                                            </p>
-                                        )}
+                                        <div className="text-right">
+                                            <span className="text-sm font-black text-white">{item.meetings}</span>
+                                            <span className="text-[10px] text-slate-500 block font-bold uppercase tracking-widest">Fechamentos</span>
+                                        </div>
                                     </div>
-                                );
-                            })()}
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="p-6 bg-white/[0.02] border-t border-white/5 text-center">
+                        <button onClick={() => setRankingModalOpen(false)} className="text-xs font-bold text-slate-500 hover:text-white uppercase transition-colors">
+                            Fechar Ranking
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
 
-                            {/* Scores */}
-                            <div>
-                                <h4 className="text-sm font-semibold text-gray-300 mb-2">Scores da Ligação</h4>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                    {["Adesão ao Script", "Conexão/Rapport", "Apres. Autoridade", "Entendimento Dores", "Apres. Solução", "Pitch", "Negociação", "Fechamento", "Confiança", "CTA", "Objeções"].map(key => {
+        {/* Row Detail Modal */}
+        {modalOpen && modalRow && (
+            <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-[#020617]/90 backdrop-blur-md">
+                <div className="glass-card max-w-4xl w-full max-h-[90vh] flex flex-col rounded-[2.5rem] border border-white/10 relative reveal-rise overflow-hidden shadow-[0_0_80px_rgba(30,58,138,0.3)]">
+                    {/* Header Area */}
+                    <div className="p-8 border-b border-white/5 bg-white/[0.02] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-primary/10 rounded-xl border border-primary/20">
+                                    <Building2 size={24} className="text-primary" />
+                                </div>
+                                <h3 className="text-3xl font-black text-white tracking-tight leading-none uppercase italic">{modalRow["Empresa (Cliente)"]}</h3>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                                <span className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/5">
+                                    <User size={12} className="text-primary" /> {modalRow["Closer"]}
+                                </span>
+                                <span className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/5">
+                                    <Calendar size={12} className="text-primary" /> {formatDateTime(modalRow["Data"])}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        {/* Status Badge */}
+                        <div className="flex items-center gap-4">
+                            <div className={clsx(
+                                "px-6 py-2 rounded-2xl font-black text-xs uppercase tracking-widest border shadow-lg",
+                                (modalRow["Status"] || "").toLowerCase().includes("fechado") || (modalRow["Status"] || "").toLowerCase().includes("vendido")
+                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10"
+                                    : (modalRow["Status"] || "").toLowerCase().includes("pendente")
+                                        ? "bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-amber-500/10"
+                                        : "bg-red-500/10 text-red-400 border-red-500/20 shadow-red-500/10"
+                            )}>
+                                {modalRow["Status"] || "Sem Status"}
+                            </div>
+                            <button onClick={() => setModalOpen(false)} className="p-3 rounded-full hover:bg-white/10 text-slate-500 hover:text-white transition-all bg-white/5 border border-white/5">
+                                <X size={20} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Content Scrollable Area */}
+                    <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                            {/* Left Column */}
+                            <div className={(modalRow["Resultado Final"] || modalRow["Objeções"]) ? "lg:col-span-4 space-y-8" : "hidden"}>
+                                {modalRow["Resultado Final"] && !isNaN(parseFloat(modalRow["Resultado Final"])) === false && (
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] flex items-center gap-2">
+                                            <PhoneCall size={12} /> Resumo Executivo
+                                        </h4>
+                                        <div className="bg-white/5 border border-white/10 p-6 rounded-3xl">
+                                            <p className="text-sm text-slate-300 leading-relaxed italic font-medium">"{modalRow["Resultado Final"]}"</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {modalRow["Objeções"] && isNaN(parseFloat(modalRow["Objeções"])) && (
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] font-black text-red-400 uppercase tracking-[0.3em] flex items-center gap-2">
+                                            <Ban size={12} /> Objeções Reportadas
+                                        </h4>
+                                        <div className="bg-red-500/5 border border-red-500/10 p-6 rounded-3xl">
+                                            <p className="text-sm text-slate-400 font-medium">{modalRow["Objeções"]}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Right Column */}
+                            <div className={clsx((modalRow["Resultado Final"] || modalRow["Objeções"]) ? "lg:col-span-8" : "lg:col-span-12", "space-y-6")}>
+                                <div className="flex items-center gap-3 mb-6">
+                                    <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Competências Avaliadas</h4>
+                                    <div className="h-px flex-1 bg-white/5" />
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                                    {[
+                                        { key: "Adesão ao Script", icon: <FileText size={16} /> },
+                                        { key: "Conexão/Rapport", icon: <Zap size={16} /> },
+                                        { key: "Apres. Autoridade", icon: <Award size={16} /> },
+                                        { key: "Entendimento Dores", icon: <Activity size={16} /> },
+                                        { key: "Apres. Solução", icon: <Lightbulb size={16} /> },
+                                        { key: "Pitch", icon: <Mic2 size={16} /> },
+                                        { key: "Negociação", icon: <Scale size={16} /> },
+                                        { key: "Fechamento", icon: <Target size={16} /> },
+                                        { key: "Confiança", icon: <ShieldCheck size={16} /> },
+                                        { key: "CTA", icon: <MousePointer2 size={16} /> },
+                                        { key: "Objeções", icon: <Ban size={16} /> },
+                                    ].map(({ key, icon }) => {
                                         const val = parseFloat(String(modalRow[key] ?? "").replace(",", "."));
-                                        const tone = isNaN(val)
-                                            ? {
-                                                text: "text-slate-400",
-                                                border: "border-slate-500/25",
-                                                bg: "bg-slate-500/8",
-                                            }
-                                            : val >= 7
-                                                ? {
-                                                    text: "text-emerald-300",
-                                                    border: "border-emerald-400/30",
-                                                    bg: "bg-emerald-500/10",
-                                                }
-                                                : val >= 4
-                                                    ? {
-                                                        text: "text-amber-300",
-                                                        border: "border-amber-400/30",
-                                                        bg: "bg-amber-500/10",
-                                                    }
-                                                    : {
-                                                        text: "text-red-300",
-                                                        border: "border-red-400/30",
-                                                        bg: "bg-red-500/10",
-                                                    };
+                                        const isNumeric = !isNaN(val);
+                                        const colorClass = !isNumeric ? "text-slate-600 border-slate-900 bg-black/20" :
+                                            val >= 8 ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5" :
+                                            val >= 6 ? "text-primary border-primary/20 bg-primary/5" :
+                                            val >= 4 ? "text-amber-400 border-amber-500/20 bg-amber-500/5" :
+                                            "text-red-400 border-red-500/20 bg-red-500/5";
                                         return (
-                                            <div key={key} className={`rounded-lg p-3 text-center border ${tone.border} ${tone.bg}`}>
-                                                <div className={`text-2xl font-bold ${tone.text}`}>{isNaN(val) ? "—" : val}</div>
-                                                <div className="text-xs text-slate-400 mt-1 leading-tight">{key}</div>
+                                            <div key={key} className={clsx("p-4 rounded-2xl border flex flex-col items-center justify-center transition-all hover:scale-105 group relative overflow-hidden", colorClass)}>
+                                                <div className="p-2 mb-2 bg-white/5 rounded-xl group-hover:bg-white/10 transition-colors">{icon}</div>
+                                                <div className="text-xl font-black">{isNumeric ? val : "—"}</div>
+                                                <div className="text-[8px] font-black uppercase tracking-widest mt-1 text-center opacity-70 leading-tight">{key}</div>
+                                                {isNumeric && (
+                                                    <div className="absolute bottom-0 left-0 h-0.5 bg-current opacity-20 w-full">
+                                                        <div className="h-full bg-current" style={{ width: `${val * 10}%` }} />
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })}
                                 </div>
                             </div>
-
-                            {/* Dores do Cliente */}
-                            {modalRow["Dores do Cliente"] && (
-                                <div>
-                                    <h4 className="text-sm font-semibold text-gray-300 mb-2">Dores do Cliente</h4>
-                                    <p className="text-sm text-gray-400 bg-white/5 rounded-lg p-3 leading-relaxed">{modalRow["Dores do Cliente"]}</p>
-                                </div>
-                            )}
-
-                            {/* Transcrição Completa */}
-                            {modalRow["Transcrição Completa"] && (
-                                <a
-                                    href={modalRow["Transcrição Completa"]}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 text-sm text-sky-300 hover:text-sky-200 transition-colors"
-                                >
-                                    <ExternalLink size={14} />
-                                    Ver Transcrição Completa
-                                </a>
-                            )}
-                        </div>
-
-                        {/* Modal Footer */}
-                        <div className="p-4 border-t border-white/5 flex justify-end bg-white/5 rounded-b-xl shrink-0">
-                            <button
-                                onClick={() => setModalOpen(false)}
-                                className="px-4 py-2 bg-secondary/50 hover:bg-secondary text-white rounded-lg text-sm font-medium transition-colors border border-white/5"
-                            >
-                                Fechar
-                            </button>
                         </div>
                     </div>
+
+                    {/* Footer */}
+                    <div className="p-8 border-t border-white/5 bg-white/[0.02] flex flex-col sm:flex-row justify-between items-center gap-6">
+                        {modalRow["Transcrição Completa"] ? (
+                            <a href={modalRow["Transcrição Completa"]} target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 px-6 py-3 bg-primary/10 border border-primary/20 rounded-2xl text-primary font-black text-xs uppercase tracking-[0.2em] hover:bg-primary hover:text-white transition-all shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+                                <Database size={16} className="group-hover:rotate-12 transition-transform" />
+                                Acessar Gravadora Completa
+                                <ExternalLink size={14} />
+                            </a>
+                        ) : (
+                            <div className="text-[10px] font-black text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                                <Search size={14} /> Nenhuma transcrição disponível no momento
+                            </div>
+                        )}
+                        <button onClick={() => setModalOpen(false)} className="px-10 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black text-xs uppercase tracking-widest transition-all">
+                            Fechar Painel de Detalhes
+                        </button>
+                    </div>
                 </div>
-            )}
-        </main>
-    );
+            </div>
+        )}
+    </>
+  );
 }

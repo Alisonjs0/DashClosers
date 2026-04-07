@@ -1,73 +1,74 @@
-import { Phone, CalendarCheck, TrendingUp } from "lucide-react";
+"use client";
 
-const SCORE_KEYS = ["Adesão ao Script", "Conexão/Rapport", "Apres. Autoridade", "Entendimento Dores", "Apres. Solução", "Pitch", "Negociação", "Fechamento", "Confiança", "CTA", "Objeções"];
+import { Phone, CalendarCheck, TrendingUp, ArrowUpRight, Zap } from "lucide-react";
+import { clsx } from "clsx";
 
-function isClosed(row) {
-    return (row["Status"] || "").toLowerCase().includes("fechad");
-}
+export default function DashboardStats({ stats }) {
+    const { total, closedCount, conversionRate, avgScore } = stats;
 
-export default function DashboardStats({ data }) {
-    const total = data.length;
-
-    const scheduled = data.filter(isClosed).length;
-    const scheduledPct = total > 0 ? Math.round((scheduled / total) * 100) : 0;
-
-    function parseScore(v) {
-        return parseFloat(String(v ?? "").replace(",", "."));
-    }
-
-    let scoreSum = 0, scoreCount = 0;
-    data.forEach(row => {
-        SCORE_KEYS.forEach(key => {
-            const v = parseScore(row[key]);
-            if (!isNaN(v)) { scoreSum += v; scoreCount++; }
-        });
-    });
-    const avgScore = scoreCount > 0 ? (scoreSum / scoreCount).toFixed(1) : "—";
-
-    const stats = [
+    const cards = [
         {
-            title: "Total de Ligações",
+            title: "Volume Total",
             value: total,
+            sub: "Ligações processadas",
             icon: Phone,
-            color: "text-sky-200",
-            bg: "bg-sky-500/20",
+            color: "text-blue-400",
+            bg: "bg-blue-500/10",
+            border: "border-blue-500/20",
+            trend: "+12%",
         },
         {
             title: "Fechamentos",
-            value: scheduled,
-            sub: total > 0 ? `${scheduledPct}% de taxa` : null,
+            value: closedCount,
+            sub: `${conversionRate}% de conversão`,
             icon: CalendarCheck,
-            color: "text-cyan-200",
-            bg: "bg-cyan-500/20",
+            color: "text-emerald-400",
+            bg: "bg-emerald-500/10",
+            border: "border-emerald-500/20",
+            trend: "+5%",
         },
         {
             title: "Score Médio",
             value: avgScore,
-            sub: "Média geral das ligações",
-            icon: TrendingUp,
-            color: "text-blue-200",
-            bg: "bg-blue-500/20",
+            sub: "Qualidade das chamadas",
+            icon: Zap,
+            color: "text-amber-400",
+            bg: "bg-amber-500/10",
+            border: "border-amber-500/20",
+            trend: "Meta: 7.0",
         },
     ];
 
     return (
-        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {stats.map((stat, idx) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {cards.map((card, idx) => (
                 <div
                     key={idx}
-                    className="glass-panel camo-panel p-6 rounded-xl flex flex-col justify-between relative overflow-hidden group border border-sky-300/20 hover:border-sky-300/45 transition-all duration-300"
+                    className="glass-card p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group hover:scale-[1.02] transition-all duration-300 cursor-default"
                 >
-                    <div className={`absolute top-0 right-0 w-24 h-24 ${stat.bg} rounded-bl-full -mr-4 -mt-4 opacity-70 group-hover:scale-110 transition-transform duration-500`} />
+                    {/* Background Glow */}
+                    <div className={clsx(
+                        "absolute -top-12 -right-12 w-32 h-32 blur-[60px] opacity-30 transition-opacity group-hover:opacity-50",
+                        card.bg
+                    )} />
+
                     <div className="flex justify-between items-start z-10">
-                        <div className={`p-3 rounded-lg ${stat.bg} border border-sky-200/20`}>
-                            <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                        <div className={clsx("p-3.5 rounded-2xl border transition-colors", card.bg, card.border)}>
+                            <card.icon className={clsx("w-6 h-6", card.color)} />
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-white/5 border border-white/5 rounded-full text-[10px] font-bold text-slate-400">
+                            {card.trend.startsWith("+") && <ArrowUpRight size={10} className="text-emerald-400" />}
+                            {card.trend}
                         </div>
                     </div>
-                    <div className="mt-4 z-10">
-                        <h3 className="text-sm font-medium text-slate-300">{stat.title}</h3>
-                        <p className="text-3xl font-bold mt-1 text-sky-50 tracking-tight">{stat.value}</p>
-                        {stat.sub && <p className="text-xs text-slate-400 mt-1">{stat.sub}</p>}
+
+                    <div className="mt-6 z-10">
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest leading-none mb-2">{card.title}</h3>
+                        <div className="flex items-center gap-2">
+                             <p className="text-4xl font-extrabold text-white tracking-tight leading-none group-hover:text-glow transition-all">{card.value}</p>
+                             <div className="h-px w-8 bg-white/10 mt-2" />
+                        </div>
+                        <p className="text-xs text-slate-400 mt-3 font-medium">{card.sub}</p>
                     </div>
                 </div>
             ))}
