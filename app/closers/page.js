@@ -4,10 +4,47 @@ import { useDashboardContext } from "@/lib/contexts/DashboardContext";
 import DashboardContent from "@/components/DashboardContent";
 import { Trophy, Users, TrendingUp, Target, Award, Star, Zap } from "lucide-react";
 import { clsx } from "clsx";
-import { parseScore } from "@/lib/utils";
+import { parseScore, isClosed, parseRowDate } from "@/lib/utils";
+import { useMemo, useState } from "react";
 
 export default function ClosersPage() {
-  const { filteredData, stats, ranking, loading, lastUpdated, fetchData, sheetUrl } = useDashboardContext();
+  const { data, loading, lastUpdated, fetchData, sheetUrl, closers } = useDashboardContext();
+
+  // Local Filter State (Independent from other tabs)
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [sdrFilter, setSdrFilter] = useState("all");
+
+  // Memoized Filtered Data
+  const filteredData = useMemo(() => {
+    return data
+      .filter((item) => {
+        const closer = (item["Closer"] || "").toLowerCase();
+        const rowDate = parseRowDate(item["Data"]);
+
+        const matchesSdr = sdrFilter === "all" || closer === sdrFilter.toLowerCase();
+        const matchesFrom = !dateFrom || (rowDate !== null && rowDate >= new Date(dateFrom).getTime());
+        const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
+
+        return matchesSdr && matchesFrom && matchesTo;
+      });
+  }, [data, sdrFilter, dateFrom, dateTo]);
+
+  // Memoized Ranking Calculation
+  const ranking = useMemo(() => {
+    const sdrRank = Object.entries(
+      filteredData.reduce((acc, row) => {
+        const sdr = row["Closer"] || "Não informado";
+        if (!acc[sdr]) acc[sdr] = 0;
+        if (isClosed(row["Status"])) acc[sdr] += 1;
+        return acc;
+      }, {})
+    )
+      .map(([name, meetings]) => ({ name, meetings }))
+      .sort((a, b) => b.meetings - a.meetings || a.name.localeCompare(b.name, "pt-BR"));
+
+    return { sdrRank };
+  }, [filteredData]);
 
   const closerStats = ranking.sdrRank.map(rank => {
     const closerData = filteredData.filter(row => (row["Closer"] || "") === rank.name);

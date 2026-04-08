@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import DashboardContent from "@/components/DashboardContent";
 import DashboardStats from "@/components/DashboardStats";
 import SatisfactionChart from "@/components/SatisfactionChart";
@@ -9,35 +9,98 @@ import { useDashboardContext } from "@/lib/contexts/DashboardContext";
 import { 
     X, Filter, Search, Trophy, TrendingUp, PhoneCall, User, 
     Calendar, Building2, Database, ExternalLink, ShieldCheck, 
-    MousePointer2, Ban, Lightbulb, Mic2, Scale, FileText, Target, Activity, Award, Zap
+    MousePointer2, Ban, Lightbulb, Mic2, Scale, FileText, Target, Activity, Award, Zap, Flame
 } from "lucide-react";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, isClosed, parseRowDate, SCORE_KEYS, parseScore } from "@/lib/utils";
 import { clsx } from "clsx";
 
 export default function Home() {
     const {
-        filteredData,
+        data,
         loading,
         lastUpdated,
         sheetUrl,
         setSheetUrl,
         sheetInputValue,
         setSheetInputValue,
-        searchTerm,
-        setSearchTerm,
-        sdrFilter,
-        setSdrFilter,
-        meetingFilter,
-        setMeetingFilter,
-        dateFrom,
-        setDateFrom,
-        dateTo,
-        setDateTo,
         fetchData,
-        stats,
-        ranking,
         closers,
     } = useDashboardContext();
+
+    // Local Filter State
+    const [searchTerm, setSearchTerm] = useState("");
+    const [sdrFilter, setSdrFilter] = useState("all");
+    const [meetingFilter, setMeetingFilter] = useState("all");
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
+
+    // Memoized Filtered Data
+    const filteredData = useMemo(() => {
+        return data
+            .filter((item) => {
+                const empresa = (item["Empresa (Cliente)"] || "").toLowerCase();
+                const closer = (item["Closer"] || "").toLowerCase();
+                const closed = isClosed(item["Status"]);
+                const rowDate = parseRowDate(item["Data"]);
+
+                const matchesSearch = empresa.includes(searchTerm.toLowerCase());
+                const matchesSdr = sdrFilter === "all" || closer === sdrFilter.toLowerCase();
+                const matchesMeeting =
+                    meetingFilter === "all" ||
+                    (meetingFilter === "yes" && closed) ||
+                    (meetingFilter === "no" && !closed);
+                const matchesFrom = !dateFrom || (rowDate !== null && rowDate >= new Date(dateFrom).getTime());
+                const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
+
+                return matchesSearch && matchesSdr && matchesMeeting && matchesFrom && matchesTo;
+            })
+            .sort((a, b) => {
+                const dateA = parseRowDate(a["Data"]);
+                const dateB = parseRowDate(b["Data"]);
+
+                if (dateA === null && dateB === null) return 0;
+                if (dateA === null) return 1;
+                if (dateB === null) return -1;
+                return dateB - dateA;
+            });
+    }, [data, searchTerm, sdrFilter, meetingFilter, dateFrom, dateTo]);
+
+    // Memoized Stats
+    const stats = useMemo(() => {
+        const total = filteredData.length;
+        const closedCount = filteredData.filter((row) => isClosed(row["Status"])).length;
+        const conversionRate = total > 0 ? Math.round((closedCount / total) * 100) : 0;
+
+        let scoreSum = 0, scoreCount = 0;
+        filteredData.forEach((row) => {
+            SCORE_KEYS.forEach((key) => {
+                const v = parseScore(row[key]);
+                if (!isNaN(v)) {
+                    scoreSum += v;
+                    scoreCount++;
+                }
+            });
+        });
+        const avgScore = scoreCount > 0 ? (scoreSum / scoreCount).toFixed(1) : "—";
+
+        return { total, closedCount, conversionRate, avgScore };
+    }, [filteredData]);
+
+    // Memoized Ranking
+    const ranking = useMemo(() => {
+        const sdrRank = Object.entries(
+            filteredData.reduce((acc, row) => {
+                const sdr = row["Closer"] || "Não informado";
+                if (!acc[sdr]) acc[sdr] = 0;
+                if (isClosed(row["Status"])) acc[sdr] += 1;
+                return acc;
+            }, {})
+        )
+            .map(([name, meetings]) => ({ name, meetings }))
+            .sort((a, b) => b.meetings - a.meetings || a.name.localeCompare(b.name, "pt-BR"));
+
+        return { sdrRank };
+    }, [filteredData]);
 
     // Modal State
     const [rankingModalOpen, setRankingModalOpen] = useState(false);
@@ -99,6 +162,27 @@ export default function Home() {
                             
                             <div className="space-y-4">
                                 <div className="space-y-1.5">
+                                    <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Pesquisar</label>
+                                    <div className="relative group">
+                                        <Search className={clsx("absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 transition-colors", searchTerm ? "text-primary" : "text-slate-500")} />
+                                        <input
+                                            type="text"
+                                            placeholder="Empresa ou Closer..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full pl-9 pr-4 py-2 bg-white/5 border border-white/5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 text-xs text-slate-200 placeholder-slate-600 transition-all"
+                                        />
+                                        {searchTerm && (
+                                            <button 
+                                                onClick={() => setSearchTerm("")}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
                                     <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Closer</label>
                                     <select
                                         value={sdrFilter}
@@ -146,9 +230,9 @@ export default function Home() {
                                     </div>
                                 </div>
 
-                                {(dateFrom || dateTo || sdrFilter !== "all" || meetingFilter !== "all") && (
+                                {(dateFrom || dateTo || sdrFilter !== "all" || meetingFilter !== "all" || searchTerm) && (
                                     <button 
-                                        onClick={() => { setDateFrom(""); setDateTo(""); setSdrFilter("all"); setMeetingFilter("all"); }}
+                                        onClick={() => { setDateFrom(""); setDateTo(""); setSdrFilter("all"); setMeetingFilter("all"); setSearchTerm(""); }}
                                         className="w-full py-2 text-[10px] uppercase font-bold text-slate-400 hover:text-white transition-colors"
                                     >
                                         Resetar Filtros
@@ -272,8 +356,18 @@ export default function Home() {
                     <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                             {/* Left Column */}
-                            <div className={(modalRow["Resultado Final"] || modalRow["Objeções"]) ? "lg:col-span-4 space-y-8" : "hidden"}>
-                                {modalRow["Resultado Final"] && !isNaN(parseFloat(modalRow["Resultado Final"])) === false && (
+                            <div className={(modalRow["Resultado Final"] || modalRow["Objeções"] || modalRow["Dores do Cliente"]) ? "lg:col-span-4 space-y-8" : "hidden"}>
+                                {modalRow["Dores do Cliente"] && isNaN(parseFloat(modalRow["Dores do Cliente"])) && (
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] font-black text-amber-400 uppercase tracking-[0.3em] flex items-center gap-2">
+                                            <Flame size={12} /> Dores do Cliente
+                                        </h4>
+                                        <div className="bg-amber-500/5 border border-amber-500/10 p-6 rounded-3xl">
+                                            <p className="text-sm text-slate-300 leading-relaxed font-medium">{modalRow["Dores do Cliente"]}</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {modalRow["Resultado Final"] && isNaN(parseFloat(modalRow["Resultado Final"])) && (
                                     <div className="space-y-4">
                                         <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] flex items-center gap-2">
                                             <PhoneCall size={12} /> Resumo Executivo

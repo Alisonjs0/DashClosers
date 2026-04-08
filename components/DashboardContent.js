@@ -8,14 +8,7 @@ export default function DashboardContent({ children, loading, lastUpdated, onRef
     <main className="flex-1 min-h-screen transition-all duration-300 ml-20 md:ml-64 bg-background/50 relative">
       {/* Top Header / Search Bar */}
       <header className="sticky top-0 z-40 h-20 bg-background/20 backdrop-blur-3xl border-b border-white/5 px-8 flex items-center justify-between">
-        <div className="flex-1 max-w-xl relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-primary transition-colors" />
-          <input
-            type="text"
-            placeholder="Pesquisar ligações, closers ou empresas..."
-            className="w-full pl-11 pr-4 py-2.5 bg-white/5 border border-white/5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 focus:bg-white/10 text-sm text-slate-200 placeholder-slate-500 transition-all"
-          />
-        </div>
+        <div className="flex-1" />
 
         <div className="flex items-center gap-4">
           <div className="hidden md:flex flex-col items-end mr-4">

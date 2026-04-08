@@ -4,35 +4,82 @@ import { useDashboardContext } from "@/lib/contexts/DashboardContext";
 import DashboardContent from "@/components/DashboardContent";
 import TrendChart from "@/components/TrendChart";
 import { BarChart3, TrendingUp, Activity, Filter, Calendar, User, Clock, ChevronDown, Star, Target, Zap, X, Search } from "lucide-react";
-import { SCORE_KEYS, parseScore } from "@/lib/utils";
+import { SCORE_KEYS, parseScore, parseRowDate, isClosed } from "@/lib/utils";
 import RadarChart from "@/components/RadarChart";
 import HourlyDistribution from "@/components/HourlyDistribution";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { clsx } from "clsx";
 
 export default function AnalyticsPage() {
   const { 
-    filteredData, 
-    stats, 
+    data, 
     loading, 
     lastUpdated, 
     fetchData, 
     sheetUrl,
-    sdrFilter,
-    setSdrFilter,
-    dateFrom,
-    setDateFrom,
-    dateTo,
-    setDateTo,
-    setFilterToday,
-    setFilterThisWeek,
-    setFilterThisMonth,
-    clearFilters,
     closers
   } = useDashboardContext();
 
+  // Local Filter State
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sdrFilter, setSdrFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [isCloserOpen, setIsCloserOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  // Filter Logic Helpers
+  const setFilterToday = () => {
+    const today = new Date().toISOString().split("T")[0];
+    setDateFrom(today);
+    setDateTo(today);
+  };
+  const setFilterThisWeek = () => {
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const startOfWeek = new Date(now.setDate(diff)).toISOString().split("T")[0];
+    const today = new Date().toISOString().split("T")[0];
+    setDateFrom(startOfWeek);
+    setDateTo(today);
+  };
+  const setFilterThisMonth = () => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+    const today = new Date().toISOString().split("T")[0];
+    setDateFrom(startOfMonth);
+    setDateTo(today);
+  };
+  const clearFilters = () => {
+    setSearchTerm("");
+    setSdrFilter("all");
+    setDateFrom("");
+    setDateTo("");
+  };
+
+  // Memoized Filtered Data (Local to this tab)
+  const filteredData = useMemo(() => {
+    return data
+      .filter((item) => {
+        const empresa = (item["Empresa (Cliente)"] || "").toLowerCase();
+        const closer = (item["Closer"] || "").toLowerCase();
+        const rowDate = parseRowDate(item["Data"]);
+
+        const matchesSearch = empresa.includes(searchTerm.toLowerCase());
+        const matchesSdr = sdrFilter === "all" || closer === sdrFilter.toLowerCase();
+        const matchesFrom = !dateFrom || (rowDate !== null && rowDate >= new Date(dateFrom).getTime());
+        const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
+
+        return matchesSearch && matchesSdr && matchesFrom && matchesTo;
+      });
+  }, [data, searchTerm, sdrFilter, dateFrom, dateTo]);
+
+  const stats = useMemo(() => {
+    const total = filteredData.length;
+    const closedCount = filteredData.filter((row) => isClosed(row["Status"])).length;
+    const conversionRate = total > 0 ? Math.round((closedCount / total) * 100) : 0;
+    return { total, closedCount, conversionRate };
+  }, [filteredData]);
 
   // Close dropdown on click outside
   useEffect(() => {
