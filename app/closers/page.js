@@ -2,7 +2,7 @@
 
 import { useDashboardContext } from "@/lib/contexts/DashboardContext";
 import DashboardContent from "@/components/DashboardContent";
-import { Trophy, Users, TrendingUp, Target, Award, Star, Zap } from "lucide-react";
+import { Trophy, Users, TrendingUp, Target, Award, Star, Zap, X } from "lucide-react";
 import { clsx } from "clsx";
 import { parseScore, isClosed, parseRowDate } from "@/lib/utils";
 import { useMemo, useState } from "react";
@@ -15,6 +15,50 @@ export default function ClosersPage() {
   const [dateTo, setDateTo] = useState("");
   const [sdrFilter, setSdrFilter] = useState("all");
 
+  // Global counts for closers to filter out those with < 3 calls (ONLY in this tab)
+  const closerGlobalCounts = useMemo(() => {
+    return data.reduce((acc, row) => {
+        const name = row["Closer"];
+        if (name) acc[name] = (acc[name] || 0) + 1;
+        return acc;
+    }, {});
+  }, [data]);
+
+  const handleQuickDateSet = (type) => {
+    const today = new Date();
+    const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    
+    let from, to = formatDate(today);
+    
+    switch(type) {
+        case 'today': from = to; break;
+        case 'yesterday': {
+            const y = new Date(); y.setDate(y.getDate() - 1);
+            from = to = formatDate(y);
+            break;
+        }
+        case '7d': {
+            const d = new Date(); d.setDate(d.getDate() - 7);
+            from = formatDate(d); break;
+        }
+        case '30d': {
+            const d = new Date(); d.setDate(d.getDate() - 30);
+            from = formatDate(d); break;
+        }
+        case 'month': {
+            from = formatDate(new Date(today.getFullYear(), today.getMonth(), 1)); break;
+        }
+        default: from = ""; to = "";
+    }
+    setDateFrom(from);
+    setDateTo(to);
+  };
+
   // Memoized Filtered Data
   const filteredData = useMemo(() => {
     return data
@@ -26,7 +70,10 @@ export default function ClosersPage() {
         const matchesFrom = !dateFrom || (rowDate !== null && rowDate >= new Date(dateFrom).getTime());
         const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
 
-        return matchesSdr && matchesFrom && matchesTo;
+        // Hide low volume closers (< 3 calls) - Specific to this view
+        const isRelevantCloser = closerGlobalCounts[item["Closer"]] >= 3;
+
+        return matchesSdr && matchesFrom && matchesTo && isRelevantCloser;
       });
   }, [data, sdrFilter, dateFrom, dateTo]);
 
@@ -84,6 +131,80 @@ export default function ClosersPage() {
               Ranking baseado em taxa de conversão real
             </p>
           </div>
+
+          <div className="flex flex-wrap items-center gap-4 bg-white/[0.03] border border-white/5 p-4 rounded-3xl backdrop-blur-md">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Períodos Rápidos</label>
+              <div className="flex gap-1.5">
+                {[
+                  { id: 'today', label: 'Hoje' },
+                  { id: 'yesterday', label: 'Ontem' },
+                  { id: '7d', label: '7D' },
+                  { id: '30d', label: '30D' },
+                  { id: 'month', label: 'Mês' },
+                ].map(range => (
+                  <button
+                    key={range.id}
+                    onClick={() => handleQuickDateSet(range.id)}
+                    className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 hover:bg-primary/20 hover:border-primary/30 text-[10px] font-black uppercase text-slate-400 hover:text-primary transition-all"
+                  >
+                    {range.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="h-10 w-px bg-white/5 mx-2" />
+
+            <div className="flex gap-3">
+              <div className="flex flex-col gap-1.5 text-slate-300">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">De</label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="bg-white/5 border border-white/5 rounded-xl px-3 py-1.5 text-xs focus:ring-1 focus:ring-primary/40 [color-scheme:dark]"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5 text-slate-300">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Até</label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="bg-white/5 border border-white/5 rounded-xl px-3 py-1.5 text-xs focus:ring-1 focus:ring-primary/40 [color-scheme:dark]"
+                />
+              </div>
+            </div>
+
+            <div className="h-10 w-px bg-white/5 mx-2" />
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Filtrar Closer</label>
+              <select
+                value={sdrFilter}
+                onChange={(e) => setSdrFilter(e.target.value)}
+                className="bg-white/5 border border-white/5 rounded-xl px-4 py-1.5 text-xs text-slate-200 focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer min-w-[150px]"
+              >
+                <option value="all" className="bg-[#0f172a]">Todos</option>
+                {closers
+                  .filter(name => closerGlobalCounts[name] >= 3)
+                  .map(s => (
+                    <option key={s} value={s} className="bg-[#0f172a]">{s}</option>
+                  ))}
+              </select>
+            </div>
+
+            {(dateFrom || dateTo || sdrFilter !== "all") && (
+              <button 
+                onClick={() => { setDateFrom(""); setDateTo(""); setSdrFilter("all"); }}
+                className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase text-slate-500 hover:text-white transition-colors border-l border-white/10 ml-2 group"
+              >
+                <X size={14} className="group-hover:rotate-90 transition-transform" />
+                Limpar
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Podium / Top Performers */}
@@ -120,7 +241,7 @@ export default function ClosersPage() {
                 <div className="flex items-center gap-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
                   <span>{closer.closedCalls} Fechados</span>
                   <span className="w-1 h-1 bg-slate-700 rounded-full" />
-                  <span>{closer.totalCalls} Ligações</span>
+                  <span>{closer.totalCalls} Calls</span>
                 </div>
               </div>
 
@@ -174,7 +295,7 @@ export default function ClosersPage() {
                     <td className="px-8 py-6">
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-slate-200">{closer.totalCalls}</span>
-                        <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Ligações</span>
+                        <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Calls</span>
                       </div>
                     </td>
                     <td className="px-8 py-6">

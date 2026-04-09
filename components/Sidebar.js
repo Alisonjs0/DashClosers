@@ -1,13 +1,14 @@
 "use client";
 
-import { LayoutDashboard, Users, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight, Zap } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight, Zap, Grid } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
 
 const MENU_ITEMS = [
-  { icon: LayoutDashboard, label: "Geral", id: "overview", href: "/" },
+  { icon: LayoutDashboard, label: "Histórico", id: "overview", href: "/" },
+  { icon: Grid, label: "Panorama", id: "panorama", href: "/panorama" },
   { icon: Users, label: "Closers", id: "closers", href: "/closers" },
   { icon: BarChart3, label: "Análise", id: "analytics", href: "/analise" },
   { icon: Settings, label: "Configurações", id: "settings", href: "/configuracoes" },

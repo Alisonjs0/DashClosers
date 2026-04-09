@@ -45,7 +45,7 @@ export default function HourlyDistribution({ data }) {
     labels: filteredHours.map(h => `${h.hour}h`),
     datasets: [
       {
-        label: "Volume de Ligações",
+        label: "Volume de Calls",
         data: filteredHours.map(h => h.count),
         backgroundColor: "rgba(59, 130, 246, 0.4)",
         borderColor: "rgba(59, 130, 246, 0.8)",

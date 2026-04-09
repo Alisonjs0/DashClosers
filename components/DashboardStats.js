@@ -1,6 +1,6 @@
 "use client";
 
-import { Phone, CalendarCheck, TrendingUp, ArrowUpRight, Zap } from "lucide-react";
+import { Video, CalendarCheck, TrendingUp, ArrowUpRight, Zap } from "lucide-react";
 import { clsx } from "clsx";
 
 export default function DashboardStats({ stats }) {
@@ -10,8 +10,8 @@ export default function DashboardStats({ stats }) {
         {
             title: "Volume Total",
             value: total,
-            sub: "Ligações processadas",
-            icon: Phone,
+            sub: "Calls processadas",
+            icon: Video,
             color: "text-blue-400",
             bg: "bg-blue-500/10",
             border: "border-blue-500/20",
@@ -30,7 +30,7 @@ export default function DashboardStats({ stats }) {
         {
             title: "Score Médio",
             value: avgScore,
-            sub: "Qualidade das chamadas",
+            sub: "Qualidade das calls",
             icon: Zap,
             color: "text-amber-400",
             bg: "bg-amber-500/10",

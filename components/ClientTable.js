@@ -57,7 +57,7 @@ export default function ClientTable({ data, onOpenModal }) {
     if (!data || data.length === 0) {
         return (
             <div className="text-center py-20 bg-white/5 rounded-[2rem] border border-white/5">
-                <p className="text-slate-500 text-sm font-medium">Nenhuma ligação encontrada com os filtros aplicados.</p>
+                <p className="text-slate-500 text-sm font-medium">Nenhuma call encontrada com os filtros aplicados.</p>
             </div>
         );
     }
