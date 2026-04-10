@@ -6,7 +6,8 @@ import {
     Flame, User, Calendar, X, ChevronRight, 
     TrendingUp, AlertCircle, Search, Filter, 
     ArrowRight, MessageSquare, Briefcase, 
-    Clock, DollarSign, ShieldAlert, Cpu
+    Clock, DollarSign, ShieldAlert, Cpu, 
+    Users2, ShieldCheck, Target, MousePointer2
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { parseRowDate, normalizeCloserName } from "@/lib/utils";
@@ -14,12 +15,41 @@ import { clsx } from "clsx";
 
 // Categories definition
 const CATEGORIES = [
-  { id: "finance", label: "Financeiro", icon: DollarSign, color: "text-red-400", bg: "bg-red-500", keywords: ["caixa", "dinheiro", "preço", "valor", "investimento", "parcel", "juros", "financeiro", "orcamento", "pobre", "caro"] },
-  { id: "time", label: "Tempo / Urgência", icon: Clock, color: "text-amber-400", bg: "bg-amber-500", keywords: ["tempo", "agenda", "corrida", "prazo", "hoje", "agora", "demora", "urgente", "implementação"] },
-  { id: "trust", label: "Autoridade / Confiança", icon: ShieldAlert, color: "text-primary", bg: "bg-primary", keywords: ["autoridade", "confiança", "seguro", "certeza", "garantia", "prova", "resultado", "caso", "saber"] },
-  { id: "product", label: "Produto / Fit", icon: Cpu, color: "text-emerald-400", bg: "bg-emerald-500", keywords: ["solução", "fit", "onboarding", "produto", "ferramenta", "funcionamento", "processo", "metodologia"] },
-  { id: "priority", label: "Prioridade / Foco", icon: Briefcase, color: "text-purple-400", bg: "bg-purple-500", keywords: ["foco", "prioridade", "outra", "momento", "depois", "planejamento"] },
+  { id: "finance", label: "Financeiro / Investimento", icon: DollarSign, color: "text-red-400", bg: "bg-red-500", keywords: ["caixa", "dinheiro", "preço", "valor", "investimento", "parcel", "juros", "financeiro", "orcamento", "caro", "custo", "pagar", "verba"] },
+  { id: "time", label: "Tempo / Operacional", icon: Clock, color: "text-amber-400", bg: "bg-amber-500", keywords: ["tempo", "agenda", "corrida", "prazo", "hoje", "agora", "demora", "urgente", "implementação", "esperar", "mês que vem", "semana"] },
+  { id: "authority", label: "Autoridade / Decisor", icon: Users2, color: "text-primary", bg: "bg-primary", keywords: ["sócio", "sociedade", "esposa", "marido", "ceo", "diretoria", "diretor", "decisor", "falar com", "equipe", "reunião com o", "aprovação"] },
+  { id: "trust", label: "Ceticismo / Confiança", icon: ShieldCheck, color: "text-emerald-400", bg: "bg-emerald-500", keywords: ["confiança", "seguro", "certeza", "garantia", "prova", "resultado", "caso", "saber", "funciona", "medo", "risco", "depoimento"] },
+  { id: "product", label: "Produto / Fit Técnico", icon: Cpu, color: "text-cyan-400", bg: "bg-cyan-500", keywords: ["solução", "fit", "onboarding", "produto", "ferramenta", "funcionamento", "processo", "metodologia", "integra", "api", "funcionalidade", "entregue"] },
+  { id: "priority", label: "Prioridade / Momento", icon: Target, color: "text-purple-400", bg: "bg-purple-500", keywords: ["foco", "prioridade", "outra", "momento", "depois", "planejamento", "estratégia", "parado", "objetivo", "agora não", "projeto"] },
 ];
+
+const HighlightedText = ({ text, keywords, colorClass }) => {
+    if (!text) return null;
+    if (!keywords || keywords.length === 0) return <span>{text}</span>;
+
+    // Create a regex from keywords with word boundaries
+    // Note: \b doesn't always handle accented chars well, so we use a more robust boundary
+    const escapedKeywords = keywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+    const regex = new RegExp(`(?<=^|[^a-záàâãéèêíïóôõöúçñ])(${escapedKeywords})(?=[^a-záàâãéèêíïóôõöúçñ]|$)`, 'gi');
+    
+    // For splitting, we need a slightly different regex to keep the delimiters
+    const splitRegex = new RegExp(`((?<=^|[^a-záàâãéèêíïóôõöúçñ])(?:${escapedKeywords})(?=[^a-záàâãéèêíïóôõöúçñ]|$))`, 'gi');
+    const parts = text.split(splitRegex);
+
+    return (
+        <span>
+            {parts.map((part, i) => 
+                regex.test(part) ? (
+                    <span key={i} className={clsx("font-black underline decoration-2 underline-offset-2", colorClass)}>
+                        {part}
+                    </span>
+                ) : (
+                    <span key={i}>{part}</span>
+                )
+            )}
+        </span>
+    );
+};
 
 export default function DoresPage() {
   const { 
@@ -76,9 +106,11 @@ export default function DoresPage() {
 
       if (matchesFrom && matchesTo && result[closerName]) {
         CATEGORIES.forEach(cat => {
-          if (cat.keywords.some(k => doresText.includes(k))) {
-            result[closerName][cat.id].push(item);
-          }
+            // Robust word separation regex to match whole words only
+            const regex = new RegExp(`(?<=^|[^a-záàâãéèêíïóôõöúçñ])(${cat.keywords.join('|')})(?=[^a-záàâãéèêíïóôõöúçñ]|$)`, 'gi');
+            if (regex.test(doresText)) {
+                result[closerName][cat.id].push(item);
+            }
         });
       }
     });
@@ -270,7 +302,11 @@ export default function DoresPage() {
                                         )} />
                                     </div>
                                     <p className="text-xs text-slate-200 leading-relaxed font-medium">
-                                        {call["Dores do Cliente"]}
+                                        <HighlightedText 
+                                            text={call["Dores do Cliente"]} 
+                                            keywords={CATEGORIES.find(c => c.id === selectedCell.categoryId)?.keywords.filter(k => (call["Dores do Cliente"] || "").toLowerCase().includes(k.toLowerCase()))} 
+                                            colorClass={CATEGORIES.find(c => c.id === selectedCell.categoryId)?.color}
+                                        />
                                     </p>
                                     <button className="flex items-center gap-1.5 text-[9px] font-black text-primary uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
                                         Ver Call <ArrowRight size={10} />
