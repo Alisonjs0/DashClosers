@@ -63,7 +63,9 @@ export default function DoresPage() {
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [selectedCell, setSelectedCell] = useState(null); // { closer: string, categoryId: string }
+  const [selectedCell, setSelectedCell] = useState(null); // { closer: string, categoryId: string, calls: [] }
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   // Filter and Categorize Data
   const { heatmapData, sortedClosers } = useMemo(() => {
@@ -128,6 +130,19 @@ export default function DoresPage() {
     });
     return max || 1;
   }, [heatmapData]);
+
+  const handleCellClick = (closer, categoryId, calls) => {
+    setSelectedCell({ closer, categoryId, calls });
+    setCurrentPage(1);
+  };
+
+  const paginatedCalls = useMemo(() => {
+    if (!selectedCell) return [];
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return selectedCell.calls.slice(start, start + ITEMS_PER_PAGE);
+  }, [selectedCell, currentPage]);
+
+  const totalPages = selectedCell ? Math.ceil(selectedCell.calls.length / ITEMS_PER_PAGE) : 0;
 
   return (
     <DashboardContent
@@ -223,7 +238,7 @@ export default function DoresPage() {
                                         return (
                                             <button
                                                 key={`${closer}-${category.id}`}
-                                                onClick={() => count > 0 && setSelectedCell({ closer, categoryId: category.id, calls })}
+                                                onClick={() => count > 0 && handleCellClick(closer, category.id, calls)}
                                                 disabled={count === 0}
                                                 className={clsx(
                                                     "h-[52px] rounded-xl transition-all relative group overflow-hidden border",
@@ -289,7 +304,30 @@ export default function DoresPage() {
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-4">
-                            {selectedCell.calls.map((call, idx) => (
+                            {/* Pagination Controls (Top) */}
+                            {totalPages > 1 && (
+                                <div className="pb-4 flex items-center justify-between border-b border-white/5 mb-2">
+                                    <button 
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="p-2 bg-white/5 rounded-lg text-slate-400 hover:text-white disabled:opacity-20 transition-all"
+                                    >
+                                        <ChevronRight size={20} className="rotate-180" />
+                                    </button>
+                                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                        Página <span className="text-white">{currentPage}</span> / {totalPages}
+                                    </div>
+                                    <button 
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages}
+                                        className="p-2 bg-white/5 rounded-lg text-slate-400 hover:text-white disabled:opacity-20 transition-all"
+                                    >
+                                        <ChevronRight size={20} />
+                                    </button>
+                                </div>
+                            )}
+
+                            {paginatedCalls.map((call, idx) => (
                                 <div key={idx} className="bg-white/[0.03] border border-white/5 p-5 rounded-2xl space-y-3 group hover:border-white/20 transition-all">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500">
