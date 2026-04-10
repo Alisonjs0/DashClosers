@@ -10,6 +10,7 @@ import {
   Legend,
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
+import { useRef } from "react";
 import { parseRowDate, parseTimeFromField } from "../lib/utils";
 
 ChartJS.register(
@@ -21,7 +22,8 @@ ChartJS.register(
   Legend
 );
 
-export default function HourlyDistribution({ data }) {
+export default function HourlyDistribution({ data, onHourSelect, selectedHour }) {
+  const chartRef = useRef();
   // Initialize bins for 24 hours
   const hours = Array.from({ length: 24 }, (_, i) => ({ hour: i, count: 0 }));
 
@@ -47,7 +49,11 @@ export default function HourlyDistribution({ data }) {
       {
         label: "Volume de Calls",
         data: filteredHours.map(h => h.count),
-        backgroundColor: "rgba(59, 130, 246, 0.4)",
+        backgroundColor: filteredHours.map(h => 
+          selectedHour !== null && selectedHour === h.hour 
+            ? "rgba(59, 130, 246, 0.9)" 
+            : "rgba(59, 130, 246, 0.4)"
+        ),
         borderColor: "rgba(59, 130, 246, 0.8)",
         borderWidth: 1,
         borderRadius: 8,
@@ -63,6 +69,26 @@ export default function HourlyDistribution({ data }) {
       legend: {
         display: false,
       },
+      tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+        titleFont: { size: 12, weight: 'bold' },
+        bodyFont: { size: 12 },
+        padding: 12,
+        cornerRadius: 8,
+        callbacks: {
+          label: (context) => ` ${context.raw} calls atendidas`
+        }
+      }
+    },
+    onClick: (event, elements) => {
+      if (!onHourSelect || elements.length === 0) return;
+      
+      const { index } = elements[0];
+      onHourSelect(filteredHours[index].hour);
+    },
+    onHover: (event, chartElement) => {
+      event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
     },
     scales: {
       x: {
@@ -89,7 +115,7 @@ export default function HourlyDistribution({ data }) {
 
   return (
     <div className="w-full h-full min-h-[250px] p-2">
-      <Bar data={chartData} options={options} />
+      <Bar ref={chartRef} data={chartData} options={options} />
     </div>
   );
 }

@@ -259,6 +259,21 @@ export default function Home() {
     const [transcript, setTranscript] = useState("");
     const [isLoadingTranscript, setIsLoadingTranscript] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
+    const [justificationModal, setJustificationModal] = useState(null);
+
+    const SCORE_ANALYSIS_MAP = {
+        "Adesão ao Script": ["Adesão Analise", "Adesao Analise"],
+        "Conexão/Rapport": ["Rapport analise", "Rapport Analise"],
+        "Apres. Autoridade": ["Autoridade Analise", "Autoridade analise"],
+        "Entendimento Dores": ["Dores Analise", "Dores analise"],
+        "Apres. Solução": ["Solução Analise", "Solucao Analise", "Solução analise"],
+        "Pitch": ["Pitch analise", "Pitch Analise"],
+        "Negociação": ["Negociação Analise", "Negociacao Analise"],
+        "Fechamento": ["Fechamento Analise", "Fechamento analise"],
+        "Confiança": ["Confiança Analise", "Confianca Analise"],
+        "CTA": ["Cta Analise", "CTA Analise", "CTA analise"],
+        "Objeções": ["Objeções Analise", "Objecoes Analise"],
+    };
 
     const openModal = (row) => {
         setModalRow(row);
@@ -676,12 +691,28 @@ export default function Home() {
                                                 const val = parseFloat(String(modalRow[key] ?? "").replace(",", "."));
                                                 const isNumeric = !isNaN(val);
                                                 const colorClass = !isNumeric ? "text-slate-600 border-slate-900 bg-black/20" :
-                                                    val >= 8 ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5" :
-                                                        val >= 6 ? "text-primary border-primary/20 bg-primary/5" :
-                                                            val >= 4 ? "text-amber-400 border-amber-500/20 bg-amber-500/5" :
-                                                                "text-red-400 border-red-500/20 bg-red-500/5";
+                                                    val >= 8 ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10" :
+                                                        val >= 6 ? "text-primary border-primary/20 bg-primary/5 hover:bg-primary/10" :
+                                                            val >= 4 ? "text-amber-400 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10" :
+                                                                "text-red-400 border-red-500/20 bg-red-500/5 hover:bg-red-500/10";
+                                                
+                                                const handleCardClick = () => {
+                                                    const possibleKeys = SCORE_ANALYSIS_MAP[key] || [];
+                                                    const content = possibleKeys.reduce((acc, k) => acc || modalRow[k], null);
+                                                    if (content) {
+                                                        setJustificationModal({ title: key, content });
+                                                    }
+                                                };
+
                                                 return (
-                                                    <div key={key} className={clsx("p-4 rounded-2xl border flex flex-col items-center justify-center transition-all hover:scale-105 group relative overflow-hidden", colorClass)}>
+                                                    <div 
+                                                        key={key} 
+                                                        onClick={handleCardClick}
+                                                        className={clsx(
+                                                            "p-4 rounded-2xl border flex flex-col items-center justify-center transition-all hover:scale-105 active:scale-95 group relative overflow-hidden cursor-pointer", 
+                                                            colorClass
+                                                        )}
+                                                    >
                                                         <div className="p-2 mb-2 bg-white/5 rounded-xl group-hover:bg-white/10 transition-colors">{icon}</div>
                                                         <div className="text-xl font-black">{isNumeric ? val : "—"}</div>
                                                         <div className="text-[8px] font-black uppercase tracking-widest mt-1 text-center opacity-70 leading-tight">{key}</div>
@@ -690,6 +721,9 @@ export default function Home() {
                                                                 <div className="h-full bg-current" style={{ width: `${val * 10}%` }} />
                                                             </div>
                                                         )}
+                                                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Lightbulb size={10} className="text-white/40" />
+                                                        </div>
                                                     </div>
                                                 );
                                             })}
@@ -736,6 +770,51 @@ export default function Home() {
                             
                             <button onClick={() => setModalOpen(false)} className="px-10 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black text-xs uppercase tracking-widest transition-all">
                                 Fechar Painel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Justification Modal */}
+            {justificationModal && (
+                <div 
+                    className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300"
+                    onClick={() => setJustificationModal(null)}
+                >
+                    <div 
+                        className="glass-card max-w-lg w-full p-8 rounded-[2.5rem] border border-white/20 shadow-2xl reveal-rise relative"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button 
+                            onClick={() => setJustificationModal(null)}
+                            className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/10 text-slate-500 transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+
+                        <div className="flex items-center gap-4 mb-8">
+                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                                <Lightbulb size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-black text-slate-500 uppercase tracking-[0.3em]">Justificativa da Nota</h3>
+                                <h2 className="text-xl font-black text-white uppercase italic tracking-tight">{justificationModal.title}</h2>
+                            </div>
+                        </div>
+
+                        <div className="bg-white/[0.03] border border-white/5 p-6 rounded-3xl min-h-[150px] flex items-center">
+                            <p className="text-base text-slate-200 leading-relaxed font-medium">
+                                {justificationModal.content}
+                            </p>
+                        </div>
+
+                        <div className="mt-8 flex justify-end">
+                            <button 
+                                onClick={() => setJustificationModal(null)}
+                                className="px-8 py-3 rounded-2xl bg-primary/20 text-primary border border-primary/30 font-black text-[10px] uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
+                            >
+                                Entendi
                             </button>
                         </div>
                     </div>

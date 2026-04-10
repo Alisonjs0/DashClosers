@@ -21,34 +21,51 @@ ChartJS.register(
   Legend
 );
 
-export default function RadarChart({ data }) {
+export default function RadarChart({ data, baselineData }) {
   // Calculate average for each score key in the current data slice
-  const averages = SCORE_KEYS.map((key) => {
-    let sum = 0, count = 0;
-    data.forEach((row) => {
-        const val = parseScore(row[key]);
-        if (!isNaN(val)) {
-            sum += val;
-            count++;
-        }
+  const calculateAverages = (inputData) => {
+    return SCORE_KEYS.map((key) => {
+      let sum = 0, count = 0;
+      inputData.forEach((row) => {
+          const val = parseScore(row[key]);
+          if (!isNaN(val)) {
+              sum += val;
+              count++;
+          }
+      });
+      return count > 0 ? parseFloat((sum / count).toFixed(2)) : 0;
     });
-    return count > 0 ? parseFloat((sum / count).toFixed(2)) : 0;
-  });
+  };
+
+  const averages = calculateAverages(data);
+  const baselineAverages = baselineData ? calculateAverages(baselineData) : null;
 
   const chartData = {
     labels: SCORE_KEYS.map(k => k.split(' ').join('')), // Clean labels for radar
     datasets: [
       {
-        label: "Performance Média",
+        label: "Seleção Atual",
         data: averages,
-        backgroundColor: "rgba(59, 130, 246, 0.2)",
-        borderColor: "rgba(59, 130, 246, 0.8)",
+        backgroundColor: "rgba(59, 130, 246, 0.4)",
+        borderColor: "rgba(59, 130, 246, 0.9)",
         borderWidth: 2,
         pointBackgroundColor: "rgba(59, 130, 246, 1)",
         pointBorderColor: "#fff",
         pointHoverBackgroundColor: "#fff",
         pointHoverBorderColor: "rgba(59, 130, 246, 1)",
+        zIndex: 2,
       },
+      ...(baselineData ? [{
+        label: "Média Geral",
+        data: baselineAverages,
+        backgroundColor: "rgba(148, 163, 184, 0.15)",
+        borderColor: "rgba(148, 163, 184, 0.4)",
+        borderWidth: 1.5,
+        borderDash: [5, 5],
+        pointRadius: 0,
+        fill: true,
+        zIndex: 1,
+      }] : []),
     ],
   };
 

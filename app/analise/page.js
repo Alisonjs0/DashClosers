@@ -4,7 +4,7 @@ import { useDashboardContext } from "@/lib/contexts/DashboardContext";
 import DashboardContent from "@/components/DashboardContent";
 import TrendChart from "@/components/TrendChart";
 import { BarChart3, TrendingUp, Activity, Filter, Calendar, User, Clock, ChevronDown, Star, Target, Zap, X, Search } from "lucide-react";
-import { SCORE_KEYS, parseScore, parseRowDate, isClosed } from "@/lib/utils";
+import { SCORE_KEYS, parseScore, parseRowDate, isClosed, parseTimeFromField } from "@/lib/utils";
 import RadarChart from "@/components/RadarChart";
 import HourlyDistribution from "@/components/HourlyDistribution";
 import { useState, useRef, useEffect, useMemo } from "react";
@@ -25,6 +25,8 @@ export default function AnalyticsPage() {
   const [sdrFilter, setSdrFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [hourFrom, setHourFrom] = useState("");
+  const [hourTo, setHourTo] = useState("");
   const [isCloserOpen, setIsCloserOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -55,6 +57,8 @@ export default function AnalyticsPage() {
     setSdrFilter("all");
     setDateFrom("");
     setDateTo("");
+    setHourFrom("");
+    setHourTo("");
   };
 
   // Memoized Filtered Data (Local to this tab)
@@ -70,9 +74,40 @@ export default function AnalyticsPage() {
         const matchesFrom = !dateFrom || (rowDate !== null && rowDate >= new Date(dateFrom).getTime());
         const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
 
-        return matchesSearch && matchesSdr && matchesFrom && matchesTo;
+        const timeValue = item["Horario de atendimento"] || item["Horario"];
+        const hour = timeValue ? parseTimeFromField(timeValue) : null;
+        const matchesHourFrom = !hourFrom || (hour !== null && hour >= parseInt(hourFrom));
+        const matchesHourTo = !hourTo || (hour !== null && hour <= parseInt(hourTo));
+
+        return matchesSearch && matchesSdr && matchesFrom && matchesTo && matchesHourFrom && matchesHourTo;
       });
+  }, [data, searchTerm, sdrFilter, dateFrom, dateTo, hourFrom, hourTo]);
+ 
+  // Base data for hourly distribution (NOT filtered by hour itself)
+  const hourlyBaseData = useMemo(() => {
+    return data.filter((item) => {
+      const empresa = (item["Empresa (Cliente)"] || "").toLowerCase();
+      const closer = (item["Closer"] || "").toLowerCase();
+      const rowDate = parseRowDate(item["Data"]);
+ 
+      const matchesSearch = empresa.includes(searchTerm.toLowerCase());
+      const matchesSdr = sdrFilter === "all" || closer === sdrFilter.toLowerCase();
+      const matchesFrom = !dateFrom || (rowDate !== null && rowDate >= new Date(dateFrom).getTime());
+      const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
+ 
+      return matchesSearch && matchesSdr && matchesFrom && matchesTo;
+    });
   }, [data, searchTerm, sdrFilter, dateFrom, dateTo]);
+
+  // Global baseline (Team average for the period, ignoring SDR and Hour filters)
+  const globalBaselineData = useMemo(() => {
+    return data.filter((item) => {
+      const rowDate = parseRowDate(item["Data"]);
+      const matchesFrom = !dateFrom || (rowDate !== null && rowDate >= new Date(dateFrom).getTime());
+      const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
+      return matchesFrom && matchesTo;
+    });
+  }, [data, dateFrom, dateTo]);
 
   const stats = useMemo(() => {
     const total = filteredData.length;
@@ -192,7 +227,41 @@ export default function AnalyticsPage() {
                 <button onClick={setFilterToday} className="px-3 py-2 rounded-lg hover:bg-white/5 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all">Hoje</button>
                 <button onClick={setFilterThisWeek} className="px-3 py-2 rounded-lg hover:bg-white/5 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all">Semana</button>
                 <button onClick={setFilterThisMonth} className="px-3 py-2 rounded-lg hover:bg-white/5 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all">Mês</button>
-                <div className="h-4 w-px bg-white/10 mx-1" />
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-xl border border-white/5">
+                <Clock size={14} className="text-primary" />
+                <select 
+                    value={hourFrom} 
+                    onChange={(e) => setHourFrom(e.target.value)}
+                    className="bg-transparent border-none outline-none text-[10px] font-bold text-white uppercase cursor-pointer"
+                >
+                    <option value="" className="bg-slate-900">00h</option>
+                    {Array.from({length: 24}, (_, i) => (
+                        <option key={i} value={i} className="bg-slate-900">{i.toString().padStart(2, '0')}h</option>
+                    ))}
+                </select>
+                <span className="text-slate-700 mx-1">-</span>
+                <select 
+                    value={hourTo} 
+                    onChange={(e) => setHourTo(e.target.value)}
+                    className="bg-transparent border-none outline-none text-[10px] font-bold text-white uppercase cursor-pointer"
+                >
+                    <option value="" className="bg-slate-900">23h</option>
+                    {Array.from({length: 24}, (_, i) => (
+                        <option key={i} value={i} className="bg-slate-900">{i.toString().padStart(2, '0')}h</option>
+                    ))}
+                </select>
+                {(hourFrom !== "" || hourTo !== "") && (
+                  <button 
+                    onClick={() => { setHourFrom(""); setHourTo(""); }}
+                    className="ml-1 p-1 hover:bg-white/10 rounded-full text-red-400/70 hover:text-red-400 transition-colors"
+                    title="Limpar Horário"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              <div className="h-4 w-px bg-white/10 mx-1" />
                 <button onClick={clearFilters} className="px-3 py-2 rounded-lg hover:bg-red-500/10 text-[9px] font-black uppercase tracking-widest text-red-400/70 hover:text-red-400 transition-all flex items-center gap-1.5">
                   <X size={10} /> Limpar
                 </button>
@@ -212,7 +281,7 @@ export default function AnalyticsPage() {
                 </div>
               </div>
               <div className="h-[300px]">
-                <TrendChart data={filteredData} />
+                <TrendChart data={filteredData} baselineData={globalBaselineData} />
               </div>
             </div>
 
@@ -223,7 +292,7 @@ export default function AnalyticsPage() {
                     <Star size={16} className="text-orange-400" fill="currentColor" /> Notas Visuais
                   </h3>
                   <div className="w-full h-[320px]">
-                    <RadarChart data={filteredData} />
+                    <RadarChart data={filteredData} baselineData={globalBaselineData} />
                   </div>
                </div>
 
@@ -233,7 +302,19 @@ export default function AnalyticsPage() {
                     <Clock size={16} className="text-primary" /> Análise de Horários
                   </h3>
                   <div className="w-full h-[320px]">
-                    <HourlyDistribution data={filteredData} />
+                    <HourlyDistribution 
+                      data={hourlyBaseData} 
+                      onHourSelect={(hour) => {
+                        if (hourFrom === hour.toString() && hourTo === hour.toString()) {
+                          setHourFrom("");
+                          setHourTo("");
+                        } else {
+                          setHourFrom(hour.toString());
+                          setHourTo(hour.toString());
+                        }
+                      }}
+                      selectedHour={hourFrom === hourTo && hourFrom !== "" ? parseInt(hourFrom) : null}
+                    />
                   </div>
                </div>
             </div>

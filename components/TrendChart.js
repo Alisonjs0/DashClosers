@@ -25,49 +25,65 @@ ChartJS.register(
   Filler
 );
 
-export default function TrendChart({ data }) {
+export default function TrendChart({ data, baselineData }) {
   const [viewMode, setViewMode] = useState("quantity"); // 'quantity' or 'percent'
 
-  // Group data by date
-  const groupedData = data.reduce((acc, row) => {
-    const rawDate = parseRowDate(row["Data"]);
-    if (!rawDate) return acc;
-    
-    const dateObj = new Date(rawDate);
-    const dateKey = `${dateObj.getDate()}/${dateObj.getMonth() + 1}`;
-    
-    if (!acc[dateKey]) {
-      acc[dateKey] = { total: 0, closed: 0 };
-    }
-    
-    acc[dateKey].total += 1;
-    if (isClosed(row["Status"])) {
-      acc[dateKey].closed += 1;
-    }
-    
-    return acc;
-  }, {});
+  const groupDataByDate = (inputData) => {
+    return inputData.reduce((acc, row) => {
+      const rawDate = parseRowDate(row["Data"]);
+      if (!rawDate) return acc;
+      
+      const dateObj = new Date(rawDate);
+      const dateKey = `${dateObj.getDate()}/${dateObj.getMonth() + 1}`;
+      
+      if (!acc[dateKey]) {
+        acc[dateKey] = { total: 0, closed: 0 };
+      }
+      
+      acc[dateKey].total += 1;
+      if (isClosed(row["Status"])) {
+        acc[dateKey].closed += 1;
+      }
+      
+      return acc;
+    }, {});
+  };
 
-  // Sort dates (simplistic for current month)
-  const labels = Object.keys(groupedData).sort((a, b) => {
+  const groupedMain = groupDataByDate(data);
+  const groupedBaseline = baselineData ? groupDataByDate(baselineData) : {};
+
+  // Find all unique dates across both datasets and sort them
+  const allDateKeys = Array.from(new Set([
+    ...Object.keys(groupedMain),
+    ...(baselineData ? Object.keys(groupedBaseline) : [])
+  ]));
+
+  const labels = allDateKeys.sort((a, b) => {
       const [da, ma] = a.split('/').map(Number);
       const [db, mb] = b.split('/').map(Number);
       return ma !== mb ? ma - mb : da - db;
   });
 
-  const chartValueData = labels.map(label => {
-    if (viewMode === "percent") {
-      return Math.round((groupedData[label].closed / groupedData[label].total) * 100);
-    }
-    return groupedData[label].closed;
-  });
+  const getChartValues = (grouped, mode) => {
+    return labels.map(label => {
+      const node = grouped[label];
+      if (!node) return 0;
+      if (mode === "percent") {
+        return node.total > 0 ? Math.round((node.closed / node.total) * 100) : 0;
+      }
+      return node.closed;
+    });
+  };
+
+  const mainValues = getChartValues(groupedMain, viewMode);
+  const baselineValues = baselineData ? getChartValues(groupedBaseline, viewMode) : [];
 
   const chartData = {
     labels,
     datasets: [
       {
         label: viewMode === "percent" ? "Taxa de Conversão (%)" : "Fechamentos",
-        data: chartValueData,
+        data: mainValues,
         fill: true,
         borderColor: viewMode === "percent" ? "rgba(245, 158, 11, 0.8)" : "rgba(59, 130, 246, 0.8)",
         backgroundColor: viewMode === "percent" ? "rgba(245, 158, 11, 0.1)" : "rgba(59, 130, 246, 0.1)",
@@ -78,7 +94,19 @@ export default function TrendChart({ data }) {
         pointBorderWidth: 2,
         pointRadius: 4,
         pointHoverRadius: 6,
+        zIndex: 2,
       },
+      ...(baselineData ? [{
+        label: "Média Geral (Time)",
+        data: baselineValues,
+        fill: false,
+        borderColor: "rgba(148, 163, 184, 0.3)",
+        borderWidth: 2,
+        borderDash: [5, 5],
+        pointRadius: 0,
+        tension: 0.4,
+        zIndex: 1,
+      }] : []),
     ],
   };
 
