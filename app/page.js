@@ -178,33 +178,86 @@ export default function Home() {
 
     // Memoized Filtered Data
     const filteredData = useMemo(() => {
-        return data
-            .filter((item) => {
-                const empresa = (item["Empresa (Cliente)"] || "").toLowerCase();
-                const closer = (item["Closer"] || "").toLowerCase();
-                const closed = isClosed(item["Status"]);
-                const rowDate = parseRowDate(item["Data"]);
+        const blacklist = ["NÃO INFORMADO", "NÃO IDENTIFICADO", "NÃO INFORMADA", "DESCONHECIDO"];
+        
+        // 1. Filtragem inicial
+        const filtered = data.filter((item) => {
+            const empresa = (item["Empresa (Cliente)"] || "").toLowerCase();
+            const closer = (item["Closer"] || "").toLowerCase();
+            const closed = isClosed(item["Status"]);
+            const rowDate = parseRowDate(item["Data"]);
 
-                const matchesSearch = empresa.includes(searchTerm.toLowerCase());
-                const matchesSdr = sdrFilter === "all" || closer === sdrFilter.toLowerCase();
-                const matchesMeeting =
-                    meetingFilter === "all" ||
-                    (meetingFilter === "yes" && closed) ||
-                    (meetingFilter === "no" && !closed);
-                const matchesFrom = !dateFrom || (rowDate !== null && rowDate >= new Date(dateFrom).getTime());
-                const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
+            const matchesSearch = empresa.includes(searchTerm.toLowerCase());
+            const matchesSdr = sdrFilter === "all" || closer === sdrFilter.toLowerCase();
+            const matchesMeeting =
+                meetingFilter === "all" ||
+                (meetingFilter === "yes" && closed) ||
+                (meetingFilter === "no" && !closed);
+            const matchesFrom = !dateFrom || (rowDate !== null && rowDate >= new Date(dateFrom).getTime());
+            const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
+            
+            const isBlacklisted = blacklist.includes(closer.toUpperCase()) || blacklist.includes(empresa.toUpperCase());
 
-                return matchesSearch && matchesSdr && matchesMeeting && matchesFrom && matchesTo;
-            })
-            .sort((a, b) => {
-                const dateA = parseRowDate(a["Data"]);
-                const dateB = parseRowDate(b["Data"]);
+            return matchesSearch && matchesSdr && matchesMeeting && matchesFrom && matchesTo && !isBlacklisted;
+        });
 
-                if (dateA === null && dateB === null) return 0;
-                if (dateA === null) return 1;
-                if (dateB === null) return -1;
-                return dateB - dateA;
+        // 2. Ordenar (mais recente primeiro)
+        const sorted = [...filtered].sort((a, b) => {
+            const dateA = parseRowDate(a["Data"]) || 0;
+            const dateB = parseRowDate(b["Data"]) || 0;
+            return dateB - dateA;
+        });
+
+        // 3. Agrupar Duplicatas
+        const grouped = [];
+        const seen = new Map();
+
+        const normalize = (val) => (val || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "").trim();
+
+        sorted.forEach((row) => {
+            const clientKey = normalize(row["Empresa (Cliente)"]);
+            const closerKey = normalize(row["Closer"]);
+            const rawDate = (row["Data"] || "").toString().trim();
+            let dateKey = normalize(rawDate);
+            const parsed = parseRowDate(rawDate);
+            if (parsed) {
+                const d = new Date(parsed);
+                if (!isNaN(d.getTime())) {
+                    dateKey = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+                }
+            }
+            const key = `${clientKey}|${closerKey}|${dateKey}`;
+
+            if (!seen.has(key)) {
+                const newRow = JSON.parse(JSON.stringify(row));
+                newRow._scores = {};
+                SCORE_KEYS.forEach(k => {
+                    const s = parseScore(row[k]);
+                    newRow._scores[k] = !isNaN(s) ? [s] : [];
+                });
+                seen.set(key, newRow);
+                grouped.push(newRow);
+            } else {
+                const existingRow = seen.get(key);
+                SCORE_KEYS.forEach(k => {
+                    const s = parseScore(row[k]);
+                    if (!isNaN(s)) existingRow._scores[k].push(s);
+                });
+            }
+        });
+
+        // 4. Calcular Médias
+        return grouped.map(row => {
+            const processedRow = { ...row };
+            SCORE_KEYS.forEach(k => {
+                const scores = row._scores[k];
+                if (scores.length > 0) {
+                    processedRow[k] = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+                }
             });
+            delete processedRow._scores;
+            return processedRow;
+        });
     }, [data, searchTerm, sdrFilter, meetingFilter, dateFrom, dateTo]);
 
     // Paginated Data
