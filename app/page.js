@@ -309,23 +309,24 @@ export default function Home() {
     const [modalOpen, setModalOpen] = useState(false);
     const [modalRow, setModalRow] = useState(null);
     const [showRecording, setShowRecording] = useState(false);
+    const [recordingType, setRecordingType] = useState("docs"); // "docs" or "tactiq"
     const [transcript, setTranscript] = useState("");
     const [isLoadingTranscript, setIsLoadingTranscript] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
     const [justificationModal, setJustificationModal] = useState(null);
 
     const SCORE_ANALYSIS_MAP = {
-        "Adesão ao Script": ["Adesão Analise", "Adesao Analise"],
-        "Conexão/Rapport": ["Rapport analise", "Rapport Analise"],
-        "Apres. Autoridade": ["Autoridade Analise", "Autoridade analise"],
-        "Entendimento Dores": ["Dores Analise", "Dores analise"],
-        "Apres. Solução": ["Solução Analise", "Solucao Analise", "Solução analise"],
-        "Pitch": ["Pitch analise", "Pitch Analise"],
-        "Negociação": ["Negociação Analise", "Negociacao Analise"],
-        "Fechamento": ["Fechamento Analise", "Fechamento analise"],
-        "Confiança": ["Confiança Analise", "Confianca Analise"],
-        "CTA": ["Cta Analise", "CTA Analise", "CTA analise"],
-        "Objeções": ["Objeções Analise", "Objecoes Analise"],
+        "Adesão ao Script": ["Script Analise", "Adesao Analise", "AdesÃ£o Analise"],
+        "Conexão/Rapport": ["Rapport analise", "Rapport Analise", "Rapport analise"],
+        "Apres. Autoridade": ["Autoridade Analise", "Autoridade analise", "ApresentaÃ§Ã£o Analise"],
+        "Entendimento Dores": ["Dores Analise", "Dores analise", "Dores Analise"],
+        "Apres. Solução": ["Solução Analise", "Solucao Analise", "Solução analise", "SoluÃ§Ã£o Anallise"],
+        "Pitch": ["Pitch analise", "Pitch Analise", "Pitch analise"],
+        "Negociação": ["Negociação Analise", "Negociacao Analise", "NegociaÃ§Ã£o Analise"],
+        "Fechamento": ["Fechamento Analise", "Fechamento analise", "Fechamento Analise"],
+        "Confiança": ["Confiança Analise", "Confianca Analise", "ConfianÃ§a analise"],
+        "CTA": ["Cta Analise", "CTA Analise", "CTA analise", "Cta Analise"],
+        "Objeções": ["Objeções Analise", "Objecoes Analise", "ObjeÃ§Ãµes Analise"],
     };
 
     const openModal = (row) => {
@@ -353,11 +354,22 @@ export default function Home() {
         }
     };
 
-    const handleToggleRecording = () => {
-        const nextState = !showRecording;
+    const handleToggleRecording = (type = "docs") => {
+        const isSameType = showRecording && recordingType === type;
+        const nextState = !isSameType;
+        
         setShowRecording(nextState);
-        if (nextState && !transcript) {
-            fetchTranscript(modalRow["Transcrição Completa"]);
+        setRecordingType(type);
+
+        if (nextState) {
+            setTranscript("");
+            const url = type === "docs" 
+                ? modalRow["Transcrição Completa"] 
+                : modalRow["Transcrição completa - Tqctiq"];
+            
+            if (url) {
+                fetchTranscript(url);
+            }
         }
     };
 
@@ -646,23 +658,38 @@ export default function Home() {
                                     <div className="relative z-10 max-w-3xl mx-auto">
                                         <div className="flex justify-between items-center mb-10 border-b border-white/5 pb-6">
                                             <div className="flex items-center gap-4">
-                                                <div className="p-3 bg-primary/10 rounded-2xl">
-                                                    <FileText className="text-primary" size={24} />
+                                                <div className={clsx(
+                                                    "p-3 rounded-2xl",
+                                                    recordingType === "tactiq" ? "bg-indigo-500/10" : "bg-primary/10"
+                                                )}>
+                                                    <FileText className={recordingType === "tactiq" ? "text-indigo-400" : "text-primary"} size={24} />
                                                 </div>
                                                 <div>
-                                                    <h2 className="text-xl font-black text-white tracking-tight uppercase italic">Transcrição da Call</h2>
+                                                    <h2 className="text-xl font-black text-white tracking-tight uppercase italic">
+                                                        {recordingType === "tactiq" ? "Transcrição Tactiq" : "Transcrição da Call"}
+                                                    </h2>
                                                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Extraído automaticamente do sistema</p>
                                                 </div>
                                             </div>
                                             
                                             {transcript && !isLoadingTranscript && (
-                                                <button 
-                                                    onClick={handleCopy}
-                                                    className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all"
-                                                >
-                                                    {isCopied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                                                    {isCopied ? "Copiado!" : "Copiar Texto"}
-                                                </button>
+                                                <div className="flex items-center gap-3">
+                                                    <button 
+                                                        onClick={() => setShowRecording(false)}
+                                                        className="flex items-center gap-2 px-4 py-2 bg-red-400/10 hover:bg-red-400/20 border border-red-400/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-400 transition-all"
+                                                    >
+                                                        <X size={14} />
+                                                        Fechar Transcrição
+                                                    </button>
+                                                    
+                                                    <button 
+                                                        onClick={handleCopy}
+                                                        className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all"
+                                                    >
+                                                        {isCopied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                                                        {isCopied ? "Copiado!" : "Copiar Texto"}
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
 
@@ -688,41 +715,59 @@ export default function Home() {
                             ) : (
                                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                                     {/* Left Column */}
-                                    <div className={(modalRow["Resultado Final"] || modalRow["Objeções"] || modalRow["Dores do Cliente"]) ? "lg:col-span-4 space-y-8" : "hidden"}>
-                                        {modalRow["Dores do Cliente"] && isNaN(parseFloat(modalRow["Dores do Cliente"])) && (
+                                    <div className="lg:col-span-4 space-y-8">
+                                        {modalRow["Dores do Cliente"] && (
                                             <div className="space-y-4">
                                                 <h4 className="text-[10px] font-black text-amber-400 uppercase tracking-[0.3em] flex items-center gap-2">
                                                     <Flame size={12} /> Dores do Cliente
                                                 </h4>
-                                                <div className="bg-amber-500/5 border border-amber-500/10 p-6 rounded-3xl">
-                                                    <p className="text-sm text-slate-300 leading-relaxed font-medium">{modalRow["Dores do Cliente"]}</p>
+                                                <div className="bg-amber-500/5 border border-amber-500/10 p-6 rounded-3xl min-h-[120px]">
+                                                    <p className="text-sm text-slate-300 leading-relaxed font-bold">{modalRow["Dores do Cliente"]}</p>
                                                 </div>
                                             </div>
                                         )}
-                                        {modalRow["Resultado Final"] && isNaN(parseFloat(modalRow["Resultado Final"])) && (
+                                        {modalRow["Status"] && (
                                             <div className="space-y-4">
                                                 <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] flex items-center gap-2">
-                                                    <Video size={12} /> Resumo Executivo
+                                                    <Activity size={12} /> Status / Resumo
                                                 </h4>
-                                                <div className="bg-white/5 border border-white/10 p-6 rounded-3xl">
-                                                    <p className="text-sm text-slate-300 leading-relaxed italic font-medium">"{modalRow["Resultado Final"]}"</p>
+                                                <div className="bg-primary/5 border border-primary/10 p-6 rounded-3xl min-h-[120px]">
+                                                    <p className="text-sm text-primary leading-relaxed font-black uppercase italic">
+                                                        {modalRow["Status"]}
+                                                    </p>
+                                                    {modalRow["Conclusão"] && (
+                                                        <p className="mt-4 text-xs text-slate-400 font-medium border-t border-white/5 pt-4">
+                                                            {modalRow["Conclusão"]}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
-                                        {modalRow["Objeções"] && isNaN(parseFloat(modalRow["Objeções"])) && (
+                                        {(modalRow["Perfil"] || modalRow["comentarioGestor"]) && (
                                             <div className="space-y-4">
-                                                <h4 className="text-[10px] font-black text-red-400 uppercase tracking-[0.3em] flex items-center gap-2">
-                                                    <Ban size={12} /> Objeções Reportadas
+                                                <h4 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] flex items-center gap-2">
+                                                    <User size={12} /> Perfil & Gestão
                                                 </h4>
-                                                <div className="bg-red-500/5 border border-red-500/10 p-6 rounded-3xl">
-                                                    <p className="text-sm text-slate-400 font-medium">{modalRow["Objeções"]}</p>
+                                                <div className="bg-white/5 border border-white/10 p-6 rounded-3xl space-y-4">
+                                                    {modalRow["Perfil"] && (
+                                                        <div>
+                                                            <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">Perfil do Cliente</span>
+                                                            <p className="text-xs text-slate-300 font-bold">{modalRow["Perfil"]}</p>
+                                                        </div>
+                                                    )}
+                                                    {modalRow["comentarioGestor"] && (
+                                                        <div>
+                                                            <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">Feedback do Gestor</span>
+                                                            <p className="text-xs text-slate-300 font-medium italic">{modalRow["comentarioGestor"]}</p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
                                     </div>
 
                                     {/* Right Column */}
-                                    <div className={clsx((modalRow["Resultado Final"] || modalRow["Objeções"]) ? "lg:col-span-8" : "lg:col-span-12", "space-y-6")}>
+                                    <div className="lg:col-span-8 space-y-6">
                                         <div className="flex items-center gap-3 mb-6">
                                             <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Competências Avaliadas</h4>
                                             <div className="h-px flex-1 bg-white/5" />
@@ -792,16 +837,16 @@ export default function Home() {
                                 {modalRow["Transcrição Completa"] ? (
                                     <>
                                         <button 
-                                            onClick={handleToggleRecording}
+                                            onClick={() => handleToggleRecording("docs")}
                                             className={clsx(
                                                 "group flex items-center gap-3 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg",
-                                                showRecording 
+                                                showRecording && recordingType === "docs"
                                                     ? "bg-white/10 text-white border border-white/20 hover:bg-white/20" 
                                                     : "bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]"
                                             )}
                                         >
-                                            <FileText size={16} className={clsx("transition-transform", showRecording ? "rotate-180" : "group-hover:scale-110")} />
-                                            {showRecording ? "Voltar para Detalhes" : "Ver Transcrição Formatada"}
+                                            <FileText size={16} className={clsx("transition-transform", showRecording && recordingType === "docs" ? "rotate-180" : "group-hover:scale-110")} />
+                                            {showRecording && recordingType === "docs" ? "Voltar para Detalhes" : "Transcrição Docs"}
                                         </button>
                                         
                                         <a 
@@ -809,7 +854,7 @@ export default function Home() {
                                             target="_blank" 
                                             rel="noopener noreferrer" 
                                             className="p-3 text-slate-500 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all"
-                                            title="Abrir em nova aba"
+                                            title="Abrir Google Docs"
                                         >
                                             <ExternalLink size={16} />
                                         </a>
@@ -817,6 +862,33 @@ export default function Home() {
                                 ) : (
                                     <div className="text-[10px] font-black text-slate-600 uppercase tracking-widest flex items-center gap-2">
                                         <Search size={14} /> Nenhuma gravação disponível
+                                    </div>
+                                )}
+
+                                {modalRow["Transcrição completa - Tqctiq"] && (
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={() => handleToggleRecording("tactiq")}
+                                            className={clsx(
+                                                "group flex items-center gap-3 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg",
+                                                showRecording && recordingType === "tactiq"
+                                                    ? "bg-white/10 text-white border border-white/20 hover:bg-white/20" 
+                                                    : "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500 hover:text-white shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+                                            )}
+                                        >
+                                            <ExternalLink size={16} className={clsx("transition-transform", showRecording && recordingType === "tactiq" ? "rotate-180" : "group-hover:scale-110")} />
+                                            {showRecording && recordingType === "tactiq" ? "Voltar para Detalhes" : "Transcrição Tactiq"}
+                                        </button>
+
+                                        <a 
+                                            href={modalRow["Transcrição completa - Tqctiq"]} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            className="p-3 text-slate-500 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all"
+                                            title="Abrir Site do Tactiq"
+                                        >
+                                            <ExternalLink size={16} />
+                                        </a>
                                     </div>
                                 )}
                             </div>
