@@ -154,67 +154,84 @@ function FunnelVisualization({ funnelTotal, funnelCTA, funnelConversao }) {
   // Use actual data from sheets if available, otherwise calculate from reprovacao
   const total = Number(funnelTotal) || 100;
   const cta = Number(funnelCTA) || 75;
-  const conversao = Number(funnelConversao) || 58;
+  const conversao = Number(funnelConversao) || 5.6;
+
+  // Calculate widths as percentages (100%, 75%, 50% for visual funnel effect)
+  const width1 = 100;
+  const width2 = (cta / total) * 100;
+  const width3 = (conversao / total) * 100;
 
   return (
-    <div className="space-y-6">
-      <div className="text-center space-y-3">
-        {/* Stage 1 */}
-        <div className="space-y-1">
-          <div className="h-12 bg-blue-500/20 border border-blue-500/30 rounded-lg flex items-center justify-center text-xs font-bold text-blue-300 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-blue-500/0"></div>
-            <span className="relative">{total.toFixed(0)}% — Oportunidades Totais</span>
-          </div>
-        </div>
-
-        {/* Arrow */}
-        <div className="flex justify-center text-white/30">
-          <ChevronDown size={20} />
-        </div>
-
-        {/* Stage 2 */}
-        <div className="space-y-1">
+    <div className="w-full space-y-8">
+      <div className="space-y-4">
+        {/* Stage 1 - Full width */}
+        <div className="flex flex-col items-center">
           <div 
-            className="bg-amber-500/20 border border-amber-500/30 rounded-lg flex items-center justify-center text-xs font-bold text-amber-300 relative overflow-hidden transition-all duration-1000"
-            style={{ height: `${Math.max(24, (cta / 100) * 48)}px` }}
+            className="w-full max-w-xs bg-gradient-to-r from-blue-500/20 via-blue-500/30 to-blue-500/20 border-2 border-blue-500/50 rounded-lg flex items-center justify-center py-4 px-4 relative overflow-hidden shadow-lg shadow-blue-500/10 transition-all duration-500"
+            style={{ width: `${width1}%`, maxWidth: `100%` }}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/10 to-amber-500/0"></div>
-            <span className="relative">{cta.toFixed(0)}% — Chegaram ao CTA</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/20 to-blue-500/0 pointer-events-none"></div>
+            <span className="relative font-bold text-blue-100 text-center">
+              <div className="text-lg font-bold">{total.toFixed(0)}%</div>
+              <div className="text-xs text-blue-200">Oportunidades Totais</div>
+            </span>
           </div>
         </div>
 
-        {/* Arrow */}
-        <div className="flex justify-center text-white/30">
-          <ChevronDown size={20} />
+        {/* Funnel line connector */}
+        <div className="flex justify-center">
+          <div className="w-1 h-6 bg-gradient-to-b from-white/20 to-white/5"></div>
         </div>
 
-        {/* Stage 3 */}
-        <div className="space-y-1">
+        {/* Stage 2 - Intermediate width */}
+        <div className="flex flex-col items-center">
           <div 
-            className="bg-emerald-500/20 border border-emerald-500/30 rounded-lg flex items-center justify-center text-xs font-bold text-emerald-300 relative overflow-hidden transition-all duration-1000"
-            style={{ height: `${Math.max(24, (conversao / 100) * 48)}px` }}
+            className="max-w-xs bg-gradient-to-r from-amber-500/20 via-amber-500/30 to-amber-500/20 border-2 border-amber-500/50 rounded-lg flex items-center justify-center py-4 px-4 relative overflow-hidden shadow-lg shadow-amber-500/10 transition-all duration-500"
+            style={{ width: `${width2}%`, maxWidth: `100%` }}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/10 to-emerald-500/0"></div>
-            <span className="relative">{conversao.toFixed(0)}% — Converteram</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/20 to-amber-500/0 pointer-events-none"></div>
+            <span className="relative font-bold text-amber-100 text-center text-sm">
+              <div className="text-lg font-bold">{cta.toFixed(0)}%</div>
+              <div className="text-xs text-amber-200">Chegaram ao CTA</div>
+            </span>
           </div>
         </div>
+
+        {/* Funnel line connector */}
+        <div className="flex justify-center">
+          <div className="w-1 h-6 bg-gradient-to-b from-white/20 to-white/5"></div>
+        </div>
+
+        {/* Stage 3 - Smallest width */}
+        <div className="flex flex-col items-center">
+          <div 
+            className="max-w-xs bg-gradient-to-r from-emerald-500/20 via-emerald-500/30 to-emerald-500/20 border-2 border-emerald-500/50 rounded-lg flex items-center justify-center py-4 px-4 relative overflow-hidden shadow-lg shadow-emerald-500/10 transition-all duration-500"
+            style={{ width: `${width3}%`, maxWidth: `100%` }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/20 to-emerald-500/0 pointer-events-none"></div>
+            <span className="relative font-bold text-emerald-100 text-center text-sm">
+              <div className="text-lg font-bold">{conversao.toFixed(1)}%</div>
+              <div className="text-xs text-emerald-200">Converteram</div>
+            </span>
+          </div>
+        </div>
+      </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-2 mt-6 pt-4 border-t border-white/5">
+        <div className="grid grid-cols-3 gap-2 mt-8 pt-4 border-t border-white/5">
           <div className="text-center">
             <div className="text-xs text-white/40">Taxa CTA</div>
             <div className="text-sm font-bold text-white">{((cta / total) * 100).toFixed(0)}%</div>
           </div>
           <div className="text-center">
             <div className="text-xs text-white/40">Taxa Conversão</div>
-            <div className="text-sm font-bold text-white">{((conversao / cta) * 100).toFixed(0)}%</div>
+            <div className="text-sm font-bold text-white">{((conversao / cta) * 100).toFixed(1)}%</div>
           </div>
           <div className="text-center">
             <div className="text-xs text-white/40">Taxa Total</div>
-            <div className="text-sm font-bold text-white">{((conversao / total) * 100).toFixed(0)}%</div>
+            <div className="text-sm font-bold text-white">{((conversao / total) * 100).toFixed(1)}%</div>
           </div>
         </div>
-      </div>
     </div>
   );
 }
