@@ -316,17 +316,17 @@ export default function Home() {
     const [justificationModal, setJustificationModal] = useState(null);
 
     const SCORE_ANALYSIS_MAP = {
-        "Adesão ao Script": ["Script Analise", "Adesao Analise", "AdesÃ£o Analise"],
-        "Conexão/Rapport": ["Rapport analise", "Rapport Analise", "Rapport analise"],
-        "Apres. Autoridade": ["Autoridade Analise", "Autoridade analise", "ApresentaÃ§Ã£o Analise"],
-        "Entendimento Dores": ["Dores Analise", "Dores analise", "Dores Analise"],
-        "Apres. Solução": ["Solução Analise", "Solucao Analise", "Solução analise", "SoluÃ§Ã£o Anallise"],
-        "Pitch": ["Pitch analise", "Pitch Analise", "Pitch analise"],
-        "Negociação": ["Negociação Analise", "Negociacao Analise", "NegociaÃ§Ã£o Analise"],
+        "Adesão ao Script": ["Script Analise", "Adesao Analise", "AdesÃ£o Analise", "Adesão Analise", "Adesão analise"],
+        "Conexão/Rapport": ["Rapport analise", "Rapport Analise", "Conexão Analise", "Conexão analise"],
+        "Apres. Autoridade": ["Autoridade Analise", "Autoridade analise", "Apresentação Analise", "ApresentaÃ§Ã£o Analise"],
+        "Entendimento Dores": ["Dores Analise", "Dores analise", "Entendimento Dores Analise"],
+        "Apres. Solução": ["Solução Analise", "Solução Anallise", "Solucao Analise", "Solução analise", "SoluÃ§Ã£o Anallise"],
+        "Pitch": ["Pitch analise", "Pitch Analise"],
+        "Negociação": ["Negociação Analise", "Negociacao Analise", "NegociaÃ§Ã£o Analise", "Negociação analise"],
         "Fechamento": ["Fechamento Analise", "Fechamento analise", "Fechamento Analise"],
-        "Confiança": ["Confiança Analise", "Confianca Analise", "ConfianÃ§a analise"],
-        "CTA": ["Cta Analise", "CTA Analise", "CTA analise", "Cta Analise"],
-        "Objeções": ["Objeções Analise", "Objecoes Analise", "ObjeÃ§Ãµes Analise"],
+        "Confiança": ["Confiança Analise", "Confianca Analise", "ConfianÃ§a analise", "Confiança analise"],
+        "CTA": ["Cta Analise", "CTA Analise", "CTA analise", "Cta analise"],
+        "Objeções": ["Objeções Analise", "Objecoes Analise", "ObjeÃ§Ãµes Analise", "Objeções analise"],
     };
 
     const openModal = (row) => {
@@ -609,7 +609,7 @@ export default function Home() {
             {/* Row Detail Modal */}
             {modalOpen && modalRow && (
                 <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-[#020617]/90 backdrop-blur-md">
-                    <div className="glass-card max-w-4xl w-full max-h-[90vh] flex flex-col rounded-[2.5rem] border border-white/10 relative reveal-rise overflow-hidden shadow-[0_0_80px_rgba(30,58,138,0.3)]">
+                    <div className="glass-card xl:max-w-7xl w-full max-h-[90vh] flex flex-col rounded-[2.5rem] border border-white/10 relative reveal-rise overflow-hidden shadow-[0_0_80px_rgba(30,58,138,0.3)]">
                         {/* Header Area */}
                         <div className="p-8 border-b border-white/5 bg-white/[0.02] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                             <div className="space-y-3">
@@ -650,7 +650,7 @@ export default function Home() {
                         {/* Content Scrollable Area */}
                         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar relative">
                             {showRecording ? (
-                                <div className="w-full min-h-[500px] rounded-[2rem] border border-white/10 bg-white/[0.02] p-8 md:p-12 relative overflow-hidden backdrop-blur-sm">
+                                <div className="w-full min-h-[500px] rounded-[2rem] border border-white/10 bg-white/[0.02] p-8 md:p-12 relative overflow-hidden backdrop-blur-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
                                     {/* Decorative elements */}
                                     <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[100px] -mr-32 -mt-32" />
                                     <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-[100px] -ml-32 -mb-32" />
@@ -676,36 +676,27 @@ export default function Home() {
                                                 <div className="flex items-center gap-3">
                                                     <button 
                                                         onClick={() => setShowRecording(false)}
-                                                        className="flex items-center gap-2 px-4 py-2 bg-red-400/10 hover:bg-red-400/20 border border-red-400/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-400 transition-all"
+                                                        className="flex items-center gap-2 px-4 py-2 bg-red-400/10 hover:bg-red-400/20 border border-red-400/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-400 transition-all font-bold"
                                                     >
                                                         <X size={14} />
-                                                        Fechar Transcrição
+                                                        Fechar
                                                     </button>
                                                     
                                                     <button 
                                                         onClick={handleCopy}
-                                                        className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all"
+                                                        className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all font-bold"
                                                     >
                                                         {isCopied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                                                        {isCopied ? "Copiado!" : "Copiar Texto"}
+                                                        {isCopied ? "Copiado!" : "Copiar"}
                                                     </button>
                                                 </div>
                                             )}
                                         </div>
 
                                         {isLoadingTranscript ? (
-                                            <div className="space-y-6">
-                                                <div className="h-8 bg-white/5 rounded-lg w-3/4 animate-pulse" />
-                                                <div className="space-y-3">
-                                                    <div className="h-4 bg-white/5 rounded w-full animate-pulse" />
-                                                    <div className="h-4 bg-white/5 rounded w-full animate-pulse" />
-                                                    <div className="h-4 bg-white/5 rounded w-5/6 animate-pulse" />
-                                                </div>
-                                                <div className="h-32 bg-white/5 rounded-2xl w-full animate-pulse" />
-                                                <div className="space-y-3">
-                                                    <div className="h-4 bg-white/5 rounded w-full animate-pulse" />
-                                                    <div className="h-4 bg-white/5 rounded w-4/5 animate-pulse" />
-                                                </div>
+                                            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                                                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                                                <p className="text-xs font-black text-slate-500 uppercase tracking-[0.2em] animate-pulse">Carregando Transcrição...</p>
                                             </div>
                                         ) : (
                                             <TranscriptRenderer text={transcript} />
@@ -713,119 +704,131 @@ export default function Home() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                                    {/* Left Column */}
-                                    <div className="lg:col-span-4 space-y-8">
-                                        {modalRow["Dores do Cliente"] && (
-                                            <div className="space-y-4">
-                                                <h4 className="text-[10px] font-black text-amber-400 uppercase tracking-[0.3em] flex items-center gap-2">
-                                                    <Flame size={12} /> Dores do Cliente
-                                                </h4>
-                                                <div className="bg-amber-500/5 border border-amber-500/10 p-6 rounded-3xl min-h-[120px]">
-                                                    <p className="text-sm text-slate-300 leading-relaxed font-bold">{modalRow["Dores do Cliente"]}</p>
-                                                </div>
-                                            </div>
-                                        )}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                    {/* 1. Status e Dores (Col 1/3) */}
+                                    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-700">
+                                        {/* Status / Resumo */}
                                         {modalRow["Status"] && (
                                             <div className="space-y-4">
                                                 <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] flex items-center gap-2">
                                                     <Activity size={12} /> Status / Resumo
                                                 </h4>
-                                                <div className="bg-primary/5 border border-primary/10 p-6 rounded-3xl min-h-[120px]">
-                                                    <p className="text-sm text-primary leading-relaxed font-black uppercase italic">
+                                                <div className="bg-primary/5 border border-primary/10 p-6 rounded-[2rem] shadow-lg shadow-primary/5">
+                                                    <p className="text-sm text-primary leading-relaxed font-black uppercase italic tracking-tight">
                                                         {modalRow["Status"]}
                                                     </p>
                                                     {modalRow["Conclusão"] && (
-                                                        <p className="mt-4 text-xs text-slate-400 font-medium border-t border-white/5 pt-4">
+                                                        <p className="mt-4 text-[13px] text-slate-300 font-medium border-t border-white/5 pt-4 leading-relaxed">
                                                             {modalRow["Conclusão"]}
                                                         </p>
                                                     )}
                                                 </div>
                                             </div>
                                         )}
-                                        {(modalRow["Perfil"] || modalRow["comentarioGestor"]) && (
+
+                                        {/* Dores do Cliente */}
+                                        {modalRow["Dores do Cliente"] && (
                                             <div className="space-y-4">
-                                                <h4 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] flex items-center gap-2">
-                                                    <User size={12} /> Perfil & Gestão
+                                                <h4 className="text-[10px] font-black text-amber-400 uppercase tracking-[0.3em] flex items-center gap-2">
+                                                    <Flame size={12} /> Dores do Cliente
                                                 </h4>
-                                                <div className="bg-white/5 border border-white/10 p-6 rounded-3xl space-y-4">
-                                                    {modalRow["Perfil"] && (
-                                                        <div>
-                                                            <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">Perfil do Cliente</span>
-                                                            <p className="text-xs text-slate-300 font-bold">{modalRow["Perfil"]}</p>
-                                                        </div>
-                                                    )}
-                                                    {modalRow["comentarioGestor"] && (
-                                                        <div>
-                                                            <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">Feedback do Gestor</span>
-                                                            <p className="text-xs text-slate-300 font-medium italic">{modalRow["comentarioGestor"]}</p>
-                                                        </div>
-                                                    )}
+                                                <div className="bg-amber-500/5 border border-amber-500/10 p-6 rounded-[2rem] shadow-lg shadow-amber-500/5">
+                                                    <p className="text-[13px] text-slate-300 leading-relaxed font-bold">
+                                                        {modalRow["Dores do Cliente"]}
+                                                    </p>
                                                 </div>
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Right Column */}
-                                    <div className="lg:col-span-8 space-y-6">
-                                        <div className="flex items-center gap-3 mb-6">
-                                            <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Competências Avaliadas</h4>
-                                            <div className="h-px flex-1 bg-white/5" />
+                                    {/* 2. Competências Avaliadas (Col 2/3) */}
+                                    <div className="space-y-6 animate-in fade-in duration-700">
+                                        <div className="flex items-center gap-4 mb-2">
+                                            <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] whitespace-nowrap">Competências Avaliadas</h4>
+                                            <div className="h-px w-full bg-gradient-to-r from-white/10 to-transparent" />
                                         </div>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                                        
+                                        <div className="grid grid-cols-2 gap-3 pb-4">
                                             {[
-                                                { key: "Adesão ao Script", icon: <FileText size={16} /> },
-                                                { key: "Conexão/Rapport", icon: <Zap size={16} /> },
-                                                { key: "Apres. Autoridade", icon: <Award size={16} /> },
-                                                { key: "Entendimento Dores", icon: <Activity size={16} /> },
-                                                { key: "Apres. Solução", icon: <Lightbulb size={16} /> },
-                                                { key: "Pitch", icon: <Mic2 size={16} /> },
-                                                { key: "Negociação", icon: <Scale size={16} /> },
-                                                { key: "Fechamento", icon: <Target size={16} /> },
-                                                { key: "Confiança", icon: <ShieldCheck size={16} /> },
-                                                { key: "CTA", icon: <MousePointer2 size={16} /> },
-                                                { key: "Objeções", icon: <Ban size={16} /> },
-                                            ].map(({ key, icon }) => {
+                                                { key: "Adesão ao Script", icon: <FileText size={18} /> },
+                                                { key: "Conexão/Rapport", icon: <Zap size={18} /> },
+                                                { key: "Apres. Autoridade", icon: <Award size={18} /> },
+                                                { key: "Entendimento Dores", icon: <Activity size={18} /> },
+                                                { key: "Apres. Solução", icon: <Lightbulb size={18} /> },
+                                                { key: "Pitch", icon: <Mic2 size={18} /> },
+                                                { key: "Negociação", icon: <Scale size={18} /> },
+                                                { key: "Fechamento", icon: <Target size={18} /> },
+                                                { key: "Confiança", icon: <ShieldCheck size={18} /> },
+                                                { key: "CTA", icon: <MousePointer2 size={18} /> },
+                                                { key: "Objeções", icon: <Ban size={18} /> },
+                                            ].map(({ key, icon }, idx) => {
                                                 const val = parseFloat(String(modalRow[key] ?? "").replace(",", "."));
                                                 const isNumeric = !isNaN(val);
                                                 const colorClass = !isNumeric ? "text-slate-600 border-slate-900 bg-black/20" :
-                                                    val >= 8 ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10" :
-                                                        val >= 6 ? "text-primary border-primary/20 bg-primary/5 hover:bg-primary/10" :
-                                                            val >= 4 ? "text-amber-400 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10" :
-                                                                "text-red-400 border-red-500/20 bg-red-500/5 hover:bg-red-500/10";
+                                                    val >= 8 ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 shadow-emerald-500/5" :
+                                                        val >= 6 ? "text-primary border-primary/20 bg-primary/5 hover:bg-primary/10 shadow-primary/5" :
+                                                            val >= 4 ? "text-amber-400 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 shadow-amber-500/5" :
+                                                                "text-red-400 border-red-500/20 bg-red-500/5 hover:bg-red-500/10 shadow-red-500/5";
                                                 
-                                                const handleCardClick = () => {
-                                                    const possibleKeys = SCORE_ANALYSIS_MAP[key] || [];
-                                                    const content = possibleKeys.reduce((acc, k) => acc || modalRow[k], null);
-                                                    if (content) {
-                                                        setJustificationModal({ title: key, content });
-                                                    }
-                                                };
-
                                                 return (
                                                     <div 
                                                         key={key} 
-                                                        onClick={handleCardClick}
+                                                        style={{ animationDelay: `${idx * 50}ms` }}
+                                                        onClick={() => {
+                                                            const possibleKeys = SCORE_ANALYSIS_MAP[key] || [];
+                                                            const content = possibleKeys.reduce((acc, k) => acc || modalRow[k], null);
+                                                            if (content) {
+                                                                setJustificationModal({ title: key, content });
+                                                            } else {
+                                                                setJustificationModal({ 
+                                                                    title: key, 
+                                                                    content: "Nenhuma justificativa detalhada encontrada para esta nota na planilha." 
+                                                                });
+                                                            }
+                                                        }}
                                                         className={clsx(
-                                                            "p-4 rounded-2xl border flex flex-col items-center justify-center transition-all hover:scale-105 active:scale-95 group relative overflow-hidden cursor-pointer", 
+                                                            "group relative p-4 rounded-[1.5rem] border flex flex-col items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer reveal-rise overflow-hidden", 
                                                             colorClass
                                                         )}
                                                     >
-                                                        <div className="p-2 mb-2 bg-white/5 rounded-xl group-hover:bg-white/10 transition-colors">{icon}</div>
-                                                        <div className="text-xl font-black">{isNumeric ? val : "—"}</div>
-                                                        <div className="text-[8px] font-black uppercase tracking-widest mt-1 text-center opacity-70 leading-tight">{key}</div>
-                                                        {isNumeric && (
-                                                            <div className="absolute bottom-0 left-0 h-0.5 bg-current opacity-20 w-full">
-                                                                <div className="h-full bg-current" style={{ width: `${val * 10}%` }} />
-                                                            </div>
-                                                        )}
-                                                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <Lightbulb size={10} className="text-white/40" />
+                                                        <div className="p-2 mb-1 bg-white/5 rounded-xl group-hover:bg-white/10 transition-colors shadow-inner">
+                                                            {icon}
                                                         </div>
+                                                        <div className="text-xl font-black tracking-tight">{isNumeric ? val : "—"}</div>
+                                                        <div className="text-[8px] font-black uppercase tracking-widest mt-1 text-center opacity-60 leading-tight group-hover:opacity-100 transition-opacity whitespace-pre-wrap">{key}</div>
                                                     </div>
                                                 );
                                             })}
                                         </div>
+                                    </div>
+
+                                    {/* 3. Perfil do Cliente (Col 3/3) */}
+                                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-700">
+                                        {(modalRow["Perfil"] || modalRow["comentarioGestor"]) && (
+                                            <div className="space-y-4">
+                                                <h4 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] flex items-center gap-2">
+                                                    <User size={12} /> Perfil do Cliente
+                                                </h4>
+                                                <div className="bg-white/5 border border-white/10 p-6 rounded-[2rem] space-y-6">
+                                                    {modalRow["Perfil"] && (
+                                                        <div>
+                                                            <span className="text-[9px] font-black text-slate-500 uppercase block mb-1.5 opacity-60">Perfil Comportamental</span>
+                                                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                                                                <p className="text-[13px] text-slate-200 font-bold italic leading-relaxed">{modalRow["Perfil"]}</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {modalRow["comentarioGestor"] && (
+                                                        <div className="border-t border-white/5 pt-6">
+                                                            <span className="text-[9px] font-black text-slate-500 uppercase block mb-1.5 opacity-60">Feedback do Gestor</span>
+                                                            <p className="text-[13px] text-slate-400 font-medium italic leading-relaxed bg-white/5 p-4 rounded-2xl border border-white/5">
+                                                                "{modalRow["comentarioGestor"]}"
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
