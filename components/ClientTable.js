@@ -53,7 +53,7 @@ function ScoreBar({ value }) {
     );
 }
 
-export default function ClientTable({ data, onOpenModal }) {
+export default function ClientTable({ data, onOpenModal, hideActions = false }) {
     if (!data || data.length === 0) {
         return (
             <div className="text-center py-20 bg-white/5 rounded-[2rem] border border-white/5">
@@ -78,8 +78,8 @@ export default function ClientTable({ data, onOpenModal }) {
                                 <div className="flex items-center gap-2"><User size={12} /> Closer</div>
                             </th>
                             <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Status</th>
-                            <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 hidden lg:table-cell">Score</th>
-                            <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 text-center">Ações</th>
+                            {!hideActions && <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 hidden lg:table-cell">Score</th>}
+                            {!hideActions && <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 text-center">Ações</th>}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
@@ -113,30 +113,34 @@ export default function ClientTable({ data, onOpenModal }) {
                                     <td className="px-6 py-5">
                                         {getStatusBadge(row["Status"])}
                                     </td>
-                                    <td className="px-6 py-5 hidden lg:table-cell min-w-[120px]">
-                                        <ScoreBar value={avg} />
-                                    </td>
-                                    <td className="px-6 py-5" onClick={(e) => e.stopPropagation()}>
-                                        <div className="flex items-center justify-center gap-3">
-                                            {row["Transcrição Completa"] ? (
-                                                <a
-                                                    href={row["Transcrição Completa"]}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="p-2 rounded-lg bg-white/5 border border-white/5 text-slate-400 hover:text-primary hover:bg-primary/10 hover:border-primary/20 transition-all"
-                                                >
-                                                    <ExternalLink size={14} />
-                                                </a>
-                                            ) : (
-                                                <div className="w-8 h-8 flex items-center justify-center">
-                                                    <div className="w-1 h-1 rounded-full bg-slate-700" />
-                                                </div>
-                                            )}
-                                            <button className="p-2 rounded-lg bg-white/5 border border-white/5 text-slate-400 hover:text-white transition-all">
-                                                <MoreHorizontal size={14} />
-                                            </button>
-                                        </div>
-                                    </td>
+                                    {!hideActions && (
+                                        <td className="px-6 py-5 hidden lg:table-cell min-w-[120px]">
+                                            <ScoreBar value={avg} />
+                                        </td>
+                                    )}
+                                    {!hideActions && (
+                                        <td className="px-6 py-5" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex items-center justify-center gap-3">
+                                                {row["Transcrição Completa"] ? (
+                                                    <a
+                                                        href={row["Transcrição Completa"]}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="p-2 rounded-lg bg-white/5 border border-white/5 text-slate-400 hover:text-primary hover:bg-primary/10 hover:border-primary/20 transition-all"
+                                                    >
+                                                        <ExternalLink size={14} />
+                                                    </a>
+                                                ) : (
+                                                    <div className="w-8 h-8 flex items-center justify-center">
+                                                        <div className="w-1 h-1 rounded-full bg-slate-700" />
+                                                    </div>
+                                                )}
+                                                <button className="p-2 rounded-lg bg-white/5 border border-white/5 text-slate-400 hover:text-white transition-all">
+                                                    <MoreHorizontal size={14} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    )}
                                 </tr>
                             );
                         })}

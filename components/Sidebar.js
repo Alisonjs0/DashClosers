@@ -5,40 +5,41 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
+import { useDashboardContext } from "@/lib/contexts/DashboardContext";
 
 const MENU_ITEMS = [
-  { icon: LayoutDashboard, label: "Histórico", id: "overview", href: "/" },
-  { icon: Grid, label: "Panorama", id: "panorama", href: "/panorama" },
-  { icon: Flame, label: "Dores", id: "dores", href: "/dores" },
-  { icon: Users, label: "Closers", id: "closers", href: "/closers" },
-  { icon: BarChart3, label: "Análise", id: "analytics", href: "/analise" },
-  { icon: Settings, label: "Configurações", id: "settings", href: "/configuracoes" },
+  { icon: LayoutDashboard, label: "Histórico", id: "overview", href: "/", roles: ["ADMIN"] },
+  { icon: LayoutDashboard, label: "Histórico CS", id: "historico-cs", href: "/historico-cs", roles: ["CS"] },
+  { icon: Grid, label: "Panorama", id: "panorama", href: "/panorama", roles: ["ADMIN"] },
+  { icon: Flame, label: "Dores", id: "dores", href: "/dores", roles: ["ADMIN"] },
+  { icon: Users, label: "Closers", id: "closers", href: "/closers", roles: ["ADMIN"] },
+  { icon: BarChart3, label: "Análise", id: "analytics", href: "/analise", roles: ["ADMIN"] },
+  { icon: Settings, label: "Configurações", id: "settings", href: "/configuracoes", roles: ["ADMIN"] },
 ];
 
 export default function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const { user, logout } = useDashboardContext();
+
+  const filteredMenuItems = MENU_ITEMS.filter(item => 
+    !item.roles || (user && item.roles.includes(user.role))
+  );
 
   return (
     <aside
-      className={clsx(
-        "fixed left-0 top-0 h-screen transition-all duration-300 z-50 border-r border-white/5 bg-card/30 backdrop-blur-2xl flex flex-col",
-        collapsed ? "w-20" : "w-64"
-      )}
+      className="fixed left-0 top-0 h-screen w-64 transition-all duration-300 z-50 bg-card/30 backdrop-blur-2xl flex flex-col"
     >
       {/* Logo Section */}
       <div className="p-6 flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.5)] animate-float">
           <Zap size={18} className="text-white fill-current" />
         </div>
-        {!collapsed && (
-          <span className="font-bold text-lg tracking-tight impact-title">Dash Closers</span>
-        )}
+        <span className="font-bold text-lg tracking-tight impact-title">Dash Closers</span>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 mt-6 px-3 space-y-2">
-        {MENU_ITEMS.map((item) => {
+        {filteredMenuItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
@@ -52,7 +53,7 @@ export default function Sidebar() {
               )}
             >
               <item.icon size={20} className={clsx(isActive ? "text-primary" : "group-hover:text-slate-200")} />
-              {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
+              <span className="font-medium text-sm">{item.label}</span>
               {isActive && (
                   <div className="absolute right-0 top-1/4 bottom-1/4 w-1 bg-primary rounded-l-full shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
               )}
@@ -63,23 +64,20 @@ export default function Sidebar() {
 
       {/* Footer / User Section */}
       <div className="p-4 border-t border-white/5">
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-all mb-4"
-        >
-          {collapsed ? <ChevronRight size={20} /> : <div className="flex items-center gap-3"><ChevronLeft size={20} /> <span className="text-sm font-medium">Recolher</span></div>}
-        </button>
-        
-        {!collapsed && (
+        {user && (
             <div className="px-4 py-3 bg-white/5 rounded-2xl flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-cyan-400 flex items-center justify-center text-xs font-bold text-white uppercase">
-                    AC
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-cyan-400 flex items-center justify-center text-[10px] font-bold text-white uppercase">
+                    {user.avatar}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-200 truncate">Admin Closers</p>
-                    <p className="text-[10px] text-slate-500 truncate">SDR Platform</p>
+                    <p className="text-xs font-semibold text-slate-200 truncate">{user.name}</p>
+                    <p className="text-[10px] text-slate-500 truncate">{user.role}</p>
                 </div>
-                <LogOut size={14} className="text-slate-500 hover:text-red-400 cursor-pointer transition-colors" />
+                <LogOut 
+                  size={14} 
+                  className="text-slate-500 hover:text-red-400 cursor-pointer transition-colors" 
+                  onClick={logout}
+                />
             </div>
         )}
       </div>

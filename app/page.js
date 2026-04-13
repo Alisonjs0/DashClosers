@@ -201,12 +201,8 @@ export default function Home() {
             return matchesSearch && matchesSdr && matchesMeeting && matchesFrom && matchesTo && !isBlacklisted;
         });
 
-        // 2. Ordenar (mais recente primeiro)
-        const sorted = [...filtered].sort((a, b) => {
-            const dateA = parseRowDate(a["Data"]) || 0;
-            const dateB = parseRowDate(b["Data"]) || 0;
-            return dateB - dateA;
-        });
+        // 2. Ordenar (mais recente primeiro - baseado na ordem do Sheets/ID)
+        const sorted = [...filtered].reverse();
 
         // 3. Agrupar Duplicatas
         const grouped = [];
@@ -239,9 +235,29 @@ export default function Home() {
                 grouped.push(newRow);
             } else {
                 const existingRow = seen.get(key);
+                
+                // Merge Score Data
                 SCORE_KEYS.forEach(k => {
                     const s = parseScore(row[k]);
                     if (!isNaN(s)) existingRow._scores[k].push(s);
+                });
+
+                // NOVO: Preencher dados faltantes no registro mais recente (existingRow) 
+                // usando dados de outros registros com a mesma chave
+                Object.keys(row).forEach(field => {
+                    const currentVal = row[field];
+                    const existingVal = existingRow[field];
+
+                    // Se o registro principal não tem essa info, pega do duplicado
+                    if (!existingVal && currentVal) {
+                        existingRow[field] = currentVal;
+                    }
+                    // Se for campo de texto analítico, concatena se forem diferentes
+                    else if (field.toLowerCase().includes('analise') || field.toLowerCase().includes('observação') || field.toLowerCase().includes('dor') || field.toLowerCase().includes('perfil')) {
+                        if (currentVal && existingVal !== currentVal && !existingVal?.toString().includes(currentVal.toString())) {
+                            existingRow[field] = `${existingVal}\n\n${currentVal}`;
+                        }
+                    }
                 });
             }
         });
@@ -363,9 +379,13 @@ export default function Home() {
 
         if (nextState) {
             setTranscript("");
-            const url = type === "docs" 
+            let url = type === "docs" 
                 ? modalRow["Transcrição Completa"] 
                 : modalRow["Transcrição completa - Tqctiq"];
+            
+            // Fix typo/naming fallback
+            if (!url && type === "docs") url = modalRow["Transcrição completa"];
+            if (!url && type === "tactiq") url = modalRow["Transcrição completa - Tactiq"];
             
             if (url) {
                 fetchTranscript(url);
@@ -391,7 +411,7 @@ export default function Home() {
                 lastUpdated={lastUpdated}
                 onRefresh={() => fetchData(sheetUrl)}
             >
-                <div className="space-y-8">
+                <div className="w-full space-y-8 py-10 pl-8 pr-10">
                     {/* Header Section */}
                     <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-10">
                         <div className="space-y-1">
@@ -417,11 +437,11 @@ export default function Home() {
                     <DashboardStats stats={stats} />
 
                     {/* Main Grid: Filters + Chart + Table */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                         {/* Left Column: Filters & Chart */}
-                        <div className="lg:col-span-1 space-y-8">
+                        <div className="lg:col-span-3 space-y-6">
                             {/* Filter Card */}
-                            <div className="glass-card p-6 rounded-[2rem] space-y-6">
+                            <div className="glass-card p-5 rounded-[2rem] space-y-5">
                                 <div className="flex items-center gap-2 mb-2">
                                     <Filter size={18} className="text-primary" />
                                     <h3 className="text-sm font-bold text-white uppercase tracking-wider">Filtros Avançados</h3>
@@ -516,7 +536,7 @@ export default function Home() {
                         </div>
 
                         {/* Right Column: Table */}
-                        <div className="lg:col-span-2">
+                        <div className="lg:col-span-9 overflow-hidden">
                             <section className="space-y-4">
                                 <div className="flex items-center justify-between px-4">
                                     <h2 className="text-xl font-black text-white uppercase tracking-tight italic">Registros Recentes</h2>
@@ -748,7 +768,7 @@ export default function Home() {
                                             <div className="h-px w-full bg-gradient-to-r from-white/10 to-transparent" />
                                         </div>
                                         
-                                        <div className="grid grid-cols-2 gap-3 pb-4">
+                                        <div className="grid grid-cols-3 gap-3 pb-4">
                                             {[
                                                 { key: "Adesão ao Script", icon: <FileText size={18} /> },
                                                 { key: "Conexão/Rapport", icon: <Zap size={18} /> },

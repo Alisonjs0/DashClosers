@@ -33,7 +33,7 @@ export default function SettingsPage() {
       onRefresh={() => fetchData(sheetUrl)}
       title="Configurações e Sincronização"
     >
-      <div className="max-w-4xl mx-auto space-y-10">
+      <div className="max-w-4xl mx-auto space-y-10 pl-8 pr-10">
         {/* Settings Header */}
         <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-10">
           <div className="space-y-1">

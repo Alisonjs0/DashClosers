@@ -5,7 +5,7 @@ import { clsx } from "clsx";
 
 export default function DashboardContent({ children, loading, lastUpdated, onRefresh, onSheetSettings }) {
   return (
-    <main className="flex-1 min-w-0 max-w-full h-screen transition-all duration-300 ml-20 md:ml-64 bg-background/50 relative overflow-hidden flex flex-col">
+    <div className="flex-1 min-w-0 max-w-full h-screen bg-background/50 relative overflow-hidden flex flex-col">
       {/* Top Header / Search Bar */}
       <header className="flex-shrink-0 z-40 h-20 bg-background/20 backdrop-blur-3xl border-b border-white/5 px-8 flex items-center justify-between">
         <div className="flex-1" />
@@ -45,11 +45,11 @@ export default function DashboardContent({ children, loading, lastUpdated, onRef
       </header>
 
       {/* Content Area */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-8 pb-8 scroll-smooth transition-all duration-500">
-        <div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-0 scroll-smooth transition-all duration-500">
+        <div className="w-full">
           {children}
         </div>
       </div>
-    </main>
+    </div>
   );
 }

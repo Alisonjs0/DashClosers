@@ -11,11 +11,18 @@ export async function GET(request) {
     try {
         // Extract Document ID
         const docIdMatch = url.match(/\/d\/(.*?)(\/|$)/);
-        if (!docIdMatch) {
-            return NextResponse.json({ error: 'Invalid Google Docs URL' }, { status: 400 });
+        let docId = docIdMatch ? docIdMatch[1] : null;
+
+        // Se não for link de Doc, mas for link do Tactiq, pode ser que o ID esteja no final
+        if (!docId && url.includes('tactiq.io')) {
+            const parts = url.split('/');
+            docId = parts[parts.length - 1];
         }
 
-        const docId = docIdMatch[1];
+        if (!docId) {
+            return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
+        }
+
         const exportUrl = `https://docs.google.com/document/d/${docId}/export?format=txt`;
 
         const response = await fetch(exportUrl, {

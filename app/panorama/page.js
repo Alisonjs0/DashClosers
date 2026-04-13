@@ -221,7 +221,7 @@ export default function PanoramaPage() {
       onRefresh={() => fetchData(sheetUrl)}
       title="Panorama Geral de Performance"
     >
-      <div className="pt-8 space-y-6 md:space-y-10 max-w-full">
+      <div className="pt-8 space-y-6 md:space-y-10 max-w-full pl-8 pr-10">
         {/* Header Section */}
         <div className="bg-[#0a0f1d]/40 backdrop-blur-3xl p-6 rounded-[2.5rem] border border-white/5 shadow-2xl mb-8">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">

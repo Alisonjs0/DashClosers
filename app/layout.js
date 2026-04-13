@@ -1,7 +1,7 @@
 import "./globals.css";
 import { Bebas_Neue, Space_Grotesk } from "next/font/google";
-import Sidebar from "@/components/Sidebar";
 import { DashboardProvider } from "@/lib/contexts/DashboardContext";
+import AuthGuard from "@/components/AuthGuard";
 
 const display = Bebas_Neue({
     weight: "400",
@@ -19,12 +19,11 @@ export const metadata = {
 export default function RootLayout({ children }) {
     return (
         <html lang="pt-BR" className="dark">
-            <body className={`${display.variable} ${bodyFont.className} bg-[#020617] antialiased`}>
+            <body className={`${display.variable} ${bodyFont.className} bg-[#020617] antialiased overflow-x-hidden p-0 m-0`}>
                 <DashboardProvider>
-                    <div className="flex min-h-screen">
-                        <Sidebar />
+                    <AuthGuard>
                         {children}
-                    </div>
+                    </AuthGuard>
                 </DashboardProvider>
             </body>
         </html>

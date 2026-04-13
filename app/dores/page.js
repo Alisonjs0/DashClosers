@@ -151,7 +151,7 @@ export default function DoresPage() {
       onRefresh={() => fetchData(sheetUrl)}
       title="Mapa de Dores"
     >
-      <div className="space-y-8">
+      <div className="space-y-8 pl-8 pr-10">
         {/* Header Section */}
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 mb-10 relative z-20">
           <div className="space-y-1">
