@@ -363,7 +363,7 @@ export default function PanoramaPage() {
             {/* Separate Sticky Header Container */}
             <div 
               ref={avgHeaderRef}
-              className="sticky top-0 z-[50] overflow-hidden bg-[#0a0f1d] border-b border-white/10 shadow-2xl rounded-none"
+              className="sticky top-0 z-[50] bg-[#0a0f1d] border-b border-white/10 shadow-2xl"
             >
               <table className="w-full border-collapse min-w-[1100px]">
                 <thead>
@@ -472,7 +472,7 @@ export default function PanoramaPage() {
             {/* Separate Sticky Header Container */}
             <div 
               ref={detHeaderRef}
-              className="sticky top-[108px] z-[50] overflow-hidden bg-[#0a0f1d] border-b border-white/10 shadow-2xl"
+              className="sticky top-[108px] z-[50] bg-[#0a0f1d] border-b border-white/10 shadow-2xl"
             >
               <table className="w-full border-collapse min-w-[1100px]">
                 <thead>
