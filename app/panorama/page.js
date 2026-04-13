@@ -3,7 +3,7 @@
 import { useDashboardContext } from "@/lib/contexts/DashboardContext";
 import DashboardContent from "@/components/DashboardContent";
 import { SCORE_KEYS, parseScore, parseRowDate } from "@/lib/utils";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { Target, AlertTriangle, CheckCircle2, TrendingUp, Grid, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -15,6 +15,18 @@ export default function PanoramaPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [viewMode, setViewMode] = useState("average"); // 'average' or 'detailed'
+  
+  // Refs for scroll synchronization
+  const avgHeaderRef = useRef(null);
+  const avgBodyRef = useRef(null);
+  const detHeaderRef = useRef(null);
+  const detBodyRef = useRef(null);
+
+  const syncScroll = (source, target) => {
+    if (source && target) {
+      target.scrollLeft = source.scrollLeft;
+    }
+  };
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -22,21 +34,28 @@ export default function PanoramaPage() {
   };
 
   const filteredData = useMemo(() => {
+    const blacklist = ["NÃO INFORMADO", "NÃO IDENTIFICADO", "NÃO INFORMADA", "DESCONHECIDO"];
     const filtered = data.filter((item) => {
       const rowDate = parseRowDate(item["Data"]);
-      const closer = (item["Closer"] || "").toLowerCase();
+      const closerName = (item["Closer"] || "").toUpperCase().trim();
+      const clientName = (item["Empresa (Cliente)"] || "").toUpperCase().trim();
 
       const matchesFrom = !dateFrom || (rowDate !== null && rowDate >= new Date(dateFrom).getTime());
       const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
-      const matchesSdr = sdrFilter === "all" || closer === sdrFilter.toLowerCase();
+      const matchesSdr = sdrFilter === "all" || closerName === sdrFilter.toUpperCase();
       
-      return matchesFrom && matchesTo && matchesSdr;
+      const isBlacklisted = blacklist.includes(closerName) || blacklist.includes(clientName);
+      
+      return matchesFrom && matchesTo && matchesSdr && !isBlacklisted;
     });
 
-    // Reset page when filters change
-    setCurrentPage(1);
     return filtered;
   }, [data, dateFrom, dateTo, sdrFilter]);
+  
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [dateFrom, dateTo, sdrFilter]);
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const paginatedRows = useMemo(() => {
@@ -89,13 +108,13 @@ export default function PanoramaPage() {
       onRefresh={() => fetchData(sheetUrl)}
       title="Panorama Geral de Performance"
     >
-      <div className="space-y-10">
+      <div className="pt-8 space-y-6 md:space-y-10 max-w-full">
         {/* Header Section */}
-        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-8 mb-4">
-          <div className="space-y-2">
-            <h1 className="text-5xl font-black impact-title leading-tight">Mapa de Calor</h1>
-            <div className="flex items-center gap-4 mt-4">
-              <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5">
+        <div className="bg-[#0a0f1d]/40 backdrop-blur-3xl p-6 rounded-[2.5rem] border border-white/5 shadow-2xl mb-8">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+            <div className="space-y-4">
+              <h1 className="text-5xl font-black impact-title leading-tight">Mapa de Calor</h1>
+              <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 w-fit">
                 {[
                   { id: 'average', label: 'Médias das Notas' },
                   { id: 'detailed', label: 'Histórico Geral' }
@@ -115,49 +134,49 @@ export default function PanoramaPage() {
                 ))}
               </div>
             </div>
-          </div>
 
-          {viewMode === 'detailed' && (
-            <div className="flex items-center gap-4 bg-white/5 p-4 rounded-3xl border border-white/5 backdrop-blur-xl animate-fade-in">
-              <div className="flex gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Início</label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-200 focus:ring-1 focus:ring-primary/40 [color-scheme:dark]"
-                />
+            {viewMode === 'detailed' && (
+              <div className="flex flex-wrap items-center gap-4 bg-white/5 p-4 rounded-3xl border border-white/5 backdrop-blur-xl animate-fade-in shadow-inner">
+                <div className="flex gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Início</label>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-200 focus:ring-1 focus:ring-primary/40 [color-scheme:dark]"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Fim</label>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-200 focus:ring-1 focus:ring-primary/40 [color-scheme:dark]"
+                  />
+                </div>
               </div>
+
+              <div className="h-10 w-px bg-white/10 mx-2 hidden sm:block" />
+
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Fim</label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-200 focus:ring-1 focus:ring-primary/40 [color-scheme:dark]"
-                />
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Filtrar Closer</label>
+                <select
+                  value={sdrFilter}
+                  onChange={(e) => setSdrFilter(e.target.value)}
+                  className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-200 focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer min-w-[180px]"
+                >
+                  <option value="all" className="bg-[#0f172a]">Todos os Closers</option>
+                  {closers.map(s => (
+                    <option key={s} value={s} className="bg-[#0f172a]">{s}</option>
+                  ))}
+                </select>
               </div>
             </div>
-
-            <div className="h-10 w-px bg-white/10 mx-2" />
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Filtrar Closer</label>
-              <select
-                value={sdrFilter}
-                onChange={(e) => setSdrFilter(e.target.value)}
-                className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-200 focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer min-w-[180px]"
-              >
-                <option value="all" className="bg-[#0f172a]">Todos os Closers</option>
-                {closers.map(s => (
-                  <option key={s} value={s} className="bg-[#0f172a]">{s}</option>
-                ))}
-              </select>
-            </div>
+          )}
           </div>
-        )}
-      </div>
+        </div>
 
         {/* Gap Analysis Summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -202,7 +221,7 @@ export default function PanoramaPage() {
         {/* View Switcher Output */}
         {viewMode === 'average' ? (
           /* Section 1: Aggregate Matrix (Closers vs Competencies) */
-          <div className="glass-card rounded-[3rem] overflow-hidden border border-white/5 bg-[#0a0f1d]/40 backdrop-blur-3xl shadow-2xl reveal-rise">
+          <div className="glass-card rounded-[2.5rem] md:rounded-[3rem] border border-white/5 bg-[#0a0f1d]/40 backdrop-blur-3xl shadow-2xl w-full max-w-full">
             <div className="p-8 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
               <h3 className="text-xl font-black text-white uppercase italic tracking-tight">Médias por Closer (Visão Agregada)</h3>
               <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white/5 px-4 py-2 rounded-full border border-white/5">
@@ -210,32 +229,46 @@ export default function PanoramaPage() {
               </div>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+            {/* Separate Sticky Header Container */}
+            <div 
+              ref={avgHeaderRef}
+              className="sticky top-0 z-[50] overflow-hidden bg-[#040713] border-b border-white/10 shadow-2xl"
+            >
+              <table className="w-full border-collapse min-w-[1100px]">
                 <thead>
-                  <tr className="bg-white/[0.01]">
-                    <th className="px-8 py-6 text-left border-b border-white/5 sticky left-0 z-20 bg-[#0a0f1d]">
+                  <tr className="bg-[#0a0f1d]">
+                    <th className="px-8 py-6 text-left border-b border-white/5 bg-[#0a0f1d]/50 w-[130px] min-w-[130px] max-w-[130px]">
                       <span className="text-[10px] uppercase font-black text-slate-500 tracking-[0.2em]">Closer</span>
                     </th>
                     {SCORE_KEYS.map(key => (
-                      <th key={key} className="px-6 py-6 text-center border-b border-white/5 min-w-[140px]">
-                        <span className="text-[10px] uppercase font-black text-slate-500 tracking-[0.2em] leading-tight block max-w-[120px] mx-auto">
+                      <th key={key} className="px-3 py-6 text-center border-b border-white/5 min-w-[80px]">
+                        <span className="text-[9px] uppercase font-black text-slate-500 tracking-wider leading-tight block max-w-[70px] mx-auto">
                           {key}
                         </span>
                       </th>
                     ))}
                   </tr>
-                 </thead>
+                </thead>
+              </table>
+            </div>
+
+            {/* Scrollable Body Container */}
+            <div 
+              ref={avgBodyRef}
+              onScroll={(e) => syncScroll(e.target, avgHeaderRef.current)}
+              className="overflow-x-auto overflow-y-visible custom-scrollbar"
+            >
+              <table className="w-full border-collapse min-w-[1100px]">
                 <tbody className="divide-y divide-white/5">
                   {closers.map(closer => (
                     <tr key={closer} className="group hover:bg-white/[0.02] transition-colors">
-                      <td className="px-8 py-6 font-black text-sm text-white uppercase italic tracking-tight sticky left-0 z-10 bg-[#0a0f1d] group-hover:text-primary transition-colors border-r border-white/5">
+                      <td className="px-8 py-6 font-black text-sm text-white uppercase italic tracking-tight bg-[#0a0f1d]/50 group-hover:text-primary transition-colors border-r border-white/5 w-[130px] min-w-[130px] max-w-[130px] truncate">
                         {closer}
                       </td>
                       {SCORE_KEYS.map(key => {
                         const score = matrixData[closer]?.[key];
                         return (
-                          <td key={key} className="p-2 text-center">
+                          <td key={key} className="p-2 text-center min-w-[80px]">
                             <div className={clsx(
                               "w-full h-14 rounded-2xl flex items-center justify-center text-sm font-black border transition-all duration-300",
                               getCellColor(score),
@@ -254,7 +287,7 @@ export default function PanoramaPage() {
           </div>
         ) : (
           /* Section 2: General Heatmap (Paginated Row-by-Row) */
-          <div className="glass-card rounded-[3rem] overflow-hidden border border-white/5 bg-[#0a0f1d]/40 backdrop-blur-3xl shadow-2xl reveal-rise">
+          <div className="glass-card rounded-[2.5rem] md:rounded-[3rem] border border-white/5 bg-[#0a0f1d]/40 backdrop-blur-3xl shadow-2xl w-full max-w-full">
             <div className="p-8 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
               <h3 className="text-xl font-black text-white uppercase italic tracking-tight">Histórico de Notas Detalhado</h3>
               <div className="flex items-center gap-4">
@@ -271,43 +304,62 @@ export default function PanoramaPage() {
               </div>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+            {/* Separate Sticky Header Container */}
+            <div 
+              ref={detHeaderRef}
+              className="sticky top-0 z-[50] overflow-hidden bg-[#040713] border-b border-white/10 shadow-2xl"
+            >
+              <table className="w-full border-collapse min-w-[1100px]">
                 <thead>
-                  <tr className="bg-white/[0.01]">
-                    <th className="px-6 py-6 text-left border-b border-white/5 sticky left-0 z-20 bg-[#0a0f1d]">
+                  <tr className="bg-[#0a0f1d]">
+                    <th className="px-6 py-6 text-left border-b border-white/5 bg-[#0a0f1d]/50 w-[160px] min-w-[160px] max-w-[160px]">
                       <span className="text-[10px] uppercase font-black text-slate-500 tracking-[0.2em]">Data / Cliente / Closer</span>
                     </th>
                     {SCORE_KEYS.map(key => (
-                      <th key={key} className="px-4 py-6 text-center border-b border-white/5 min-w-[120px]">
-                        <span className="text-[10px] uppercase font-black text-slate-500 tracking-[0.2em] leading-tight block max-w-[100px] mx-auto">
+                      <th key={key} className="px-2 py-6 text-center border-b border-white/5 min-w-[75px]">
+                        <span className="text-[9px] uppercase font-black text-slate-500 tracking-wider leading-tight block max-w-[65px] mx-auto">
                           {key}
                         </span>
                       </th>
                     ))}
                   </tr>
                 </thead>
+              </table>
+            </div>
+
+            {/* Scrollable Body Container */}
+            <div 
+              ref={detBodyRef}
+              onScroll={(e) => syncScroll(e.target, detHeaderRef.current)}
+              className="overflow-x-auto overflow-y-visible custom-scrollbar"
+            >
+              <table className="w-full border-collapse min-w-[1100px]">
                 <tbody className="divide-y divide-white/5">
                   {paginatedRows.map((row, idx) => (
                     <tr key={idx} className="group hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-4 sticky left-0 z-10 bg-[#0a0f1d] border-r border-white/5">
-                        <div className="flex flex-col gap-0.5 max-w-[250px]">
-                          <span className="text-[10px] font-black text-primary uppercase">{row["Data"]}</span>
-                          <span className="text-xs font-black text-white truncate uppercase italic">{row["Empresa (Cliente)"]}</span>
-                          <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">{row["Closer"]}</span>
+                      <td className="px-6 py-4 bg-[#0a0f1d]/50 border-r border-white/5 w-[160px] min-w-[160px] max-w-[160px]">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[9px] font-black text-primary/70 uppercase tracking-tighter">
+                            {row["Data"] ? new Date(parseRowDate(row["Data"])).toLocaleDateString('pt-BR') : "-"}
+                          </span>
+                          <span className="text-[11px] font-black text-white uppercase italic truncate">
+                            {row["Empresa (Cliente)"]}
+                          </span>
+                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">
+                            {row["Closer"]}
+                          </span>
                         </div>
                       </td>
                       {SCORE_KEYS.map(key => {
                         const score = parseScore(row[key]);
-                        const displayScore = isNaN(score) ? "-" : score;
                         return (
-                          <td key={key} className="p-1 text-center">
+                          <td key={key} className="p-2 text-center min-w-[75px]">
                             <div className={clsx(
                               "w-full h-12 rounded-xl flex items-center justify-center text-xs font-black border transition-all duration-300",
-                              getCellColor(isNaN(score) ? null : score),
-                              !isNaN(score) && "hover:scale-[1.05]"
+                              getCellColor(score),
+                              !isNaN(score) && "shadow-md group-hover:scale-[1.05]"
                             )}>
-                              {displayScore}
+                              {!isNaN(score) ? score : "-"}
                             </div>
                           </td>
                         );
