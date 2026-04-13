@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, Users, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight, Zap, Grid, Flame } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight, Zap, Grid, Flame, FileBarChart } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -14,6 +14,7 @@ const MENU_ITEMS = [
   { icon: Flame, label: "Dores", id: "dores", href: "/dores", roles: ["ADMIN"] },
   { icon: Users, label: "Closers", id: "closers", href: "/closers", roles: ["ADMIN"] },
   { icon: BarChart3, label: "Análise", id: "analytics", href: "/analise", roles: ["ADMIN"] },
+  { icon: FileBarChart, label: "Relatórios", id: "relatorios", href: "/relatorios", roles: ["ADMIN"] },
   { icon: Settings, label: "Configurações", id: "settings", href: "/configuracoes", roles: ["ADMIN"] },
 ];
 

@@ -40,26 +40,27 @@ export default function HistoricoCS() {
     const filteredData = useMemo(() => {
         const blacklist = ["NÃO INFORMADO", "NÃO IDENTIFICADO", "NÃO INFORMADA", "DESCONHECIDO"];
         
-        // 1. Initial Filtering
-        const filtered = data.filter((item) => {
-            const empresa = (item["Empresa (Cliente)"] || "").toLowerCase();
-            const rowDate = parseRowDate(item["Data"]);
-
-            const matchesSearch = empresa.includes(searchTerm.toLowerCase());
-            const matchesFrom = !dateFrom || (rowDate !== null && rowDate >= new Date(dateFrom).getTime());
-            const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
-            
-            const isBlacklisted = blacklist.includes(empresa.toUpperCase());
-
-            return matchesSearch && matchesFrom && matchesTo && !isBlacklisted;
-        });
-
-        // 2. Sort by date descending
-        const sorted = [...filtered].sort((a, b) => {
-            const dateA = parseRowDate(a["Data"]) || 0;
-            const dateB = parseRowDate(b["Data"]) || 0;
-            return dateB - dateA;
-        });
+        // 2. Sort by date and row index (descending)
+        const sorted = data.map((item, index) => ({ ...item, _originalIndex: index }))
+            .filter((item) => {
+                const empresa = (item["Empresa (Cliente)"] || "").toLowerCase();
+                const rowDate = parseRowDate(item["Data"]);
+                const matchesSearch = empresa.includes(searchTerm.toLowerCase());
+                const matchesFrom = !dateFrom || (rowDate !== null && rowDate >= new Date(dateFrom).getTime());
+                const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
+                const isBlacklisted = blacklist.includes(empresa.toUpperCase());
+                return matchesSearch && matchesFrom && matchesTo && !isBlacklisted;
+            })
+            .sort((a, b) => {
+                const dateA = parseRowDate(a["Data"]) || 0;
+                const dateB = parseRowDate(b["Data"]) || 0;
+                
+                // Se as datas forem iguais, usa o índice original da planilha (mais baixo = mais recente no sentido de inserção)
+                if (dateB === dateA) {
+                    return b._originalIndex - a._originalIndex;
+                }
+                return dateB - dateA;
+            });
 
         // 3. Group Duplicates (Same Client, Closer, and Date)
         const grouped = [];
