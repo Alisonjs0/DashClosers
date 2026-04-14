@@ -16,7 +16,8 @@ import {
   Check,
   TrendingUp,
   Download,
-  Zap
+  Zap,
+  X
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { clsx } from "clsx";
@@ -642,6 +643,8 @@ export default function RelatoriosPage() {
   const [selectedCloser, setSelectedCloser] = useState("Todos");
   const [expandedCloser, setExpandedCloser] = useState(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [toast, setToast] = useState(null);
 
   const SHEET_URL = "https://docs.google.com/spreadsheets/d/1nzSfmHlbs5FPUsLrcaJNQhdHCqEWyP9Lf6yaF-7vFhI/export?format=csv&gid=2092544085";
 
@@ -665,13 +668,57 @@ export default function RelatoriosPage() {
     fetchRelatorios();
   }, []);
 
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 5000);
+  };
+
+  const handleSendToWebhook = async () => {
+    if (sending) return;
+    setSending(true);
+    
+    try {
+      // 1. Fresh fetch to ensure we have the absolute last row
+      const res = await fetch(`/api/sheets?url=` + encodeURIComponent(SHEET_URL));
+      const json = await res.json();
+      
+      if (!json.data || json.data.length === 0) {
+        throw new Error("Não foi possível carregar os dados para envio.");
+      }
+
+      // 2. Extract the absolute last row
+      const lastRow = json.data[json.data.length - 1];
+      
+      // 3. Send to N8N Webhook
+      const webhookUrl = "https://n8n.aegmedia.com.br/webhook/d34fb06b-04e0-4c83-a95b-c459d8bc8ed7";
+      const webhookRes = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...lastRow,
+          _timestamp: new Date().toISOString(),
+          _source: "Dash Closers - Reports Tab"
+        }),
+      });
+
+      if (!webhookRes.ok) throw new Error("Erro na resposta do Webhook");
+      
+      showToast("Relatório semanal enviado com sucesso para o N8N!");
+    } catch (error) {
+      console.error("Erro ao enviar webhook:", error);
+      showToast(error.message || "Erro ao conectar com o servidor.", "error");
+    } finally {
+      setSending(false);
+    }
+  };
+
   // ─────────────────────────────────────────────────────────────
   // PARSE & STRUCTURE DATA
   // ─────────────────────────────────────────────────────────────
 
   const latestAnalysis = useMemo(() => {
     if (data.length === 0) return null;
-    const row = data[0];
+    const row = data[data.length - 1]; // Alterado para pegar SEMPRE a última linha
     
     // Debug: Log available columns
     if (Object.keys(row).length > 0) {
@@ -860,8 +907,17 @@ export default function RelatoriosPage() {
               ))}
             </div>
           </div>
-          <div className="hidden md:flex items-center gap-2 text-white/30 text-xs">
-            <Calendar size={14} /> Período: Última Semana
+          <div className="flex items-center gap-3">
+            <button
+              disabled={true}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 border bg-white/5 text-white/20 border-white/5 cursor-not-allowed opacity-50"
+            >
+              <Zap size={14} />
+              Webhook Desativado
+            </button>
+            <div className="hidden md:flex items-center gap-2 text-white/30 text-xs bg-white/5 px-3 py-2 rounded-xl border border-white/5">
+              <Calendar size={14} /> <span className="uppercase tracking-tighter font-bold">Última Semana</span>
+            </div>
           </div>
         </div>
 
@@ -1112,6 +1168,40 @@ export default function RelatoriosPage() {
         onClose={() => setShowPlanModal(false)}
         planoAcao={latestAnalysis?.["plano acao"] || ""}
       />
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* TOAST NOTIFICATION */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      {toast && (
+        <div 
+          className={clsx(
+            "fixed bottom-8 right-8 z-[9999] flex items-center gap-3 px-6 py-4 rounded-2xl backdrop-blur-2xl border shadow-2xl animate-in slide-in-from-right-10 duration-500",
+            toast.type === 'error' 
+              ? "bg-red-500/20 border-red-500/30 text-white" 
+              : "bg-emerald-500/20 border-emerald-500/30 text-white"
+          )}
+        >
+          {toast.type === 'error' ? (
+            <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center border border-red-500/30">
+              <AlertTriangle className="text-red-400" size={18} />
+            </div>
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+              <Check className="text-emerald-400" size={18} />
+            </div>
+          )}
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase font-black tracking-widest opacity-50">Notificação System</span>
+            <span className="text-sm font-bold">{toast.message}</span>
+          </div>
+          <button 
+            onClick={() => setToast(null)}
+            className="ml-4 p-1 hover:bg-white/10 rounded-lg transition-colors"
+          >
+            <X size={16} className="opacity-40 hover:opacity-100" />
+          </button>
+        </div>
+      )}
     </DashboardContent>
   );
 }
