@@ -6,6 +6,7 @@ import { SCORE_KEYS, parseScore, parseRowDate } from "@/lib/utils";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { Target, AlertTriangle, CheckCircle2, TrendingUp, Grid, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { clsx } from "clsx";
+import CallDetailsModal from "@/components/CallDetailsModal";
 
 export default function PanoramaPage() {
   const { data, loading, lastUpdated, fetchData, sheetUrl, closers: allClosers } = useDashboardContext();
@@ -16,6 +17,13 @@ export default function PanoramaPage() {
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [viewMode, setViewMode] = useState("average"); // 'average' or 'detailed'
   const [lastCallsLimit, setLastCallsLimit] = useState(10);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalRow, setModalRow] = useState(null);
+
+  const openModal = (row) => {
+    setModalRow(row);
+    setModalOpen(true);
+  };
 
   const ALLOWED_CLOSERS = ["CARLOS SILVA", "GUSTAVO EMANUEL", "HENRIQUE", "BRUNO BORGES"];
 
@@ -501,7 +509,11 @@ export default function PanoramaPage() {
               <table className="w-full border-collapse min-w-[1100px]">
                 <tbody className="divide-y divide-white/5">
                   {paginatedRows.map((row, idx) => (
-                    <tr key={idx} className="group hover:bg-white/[0.02] transition-colors">
+                    <tr 
+                      key={idx} 
+                      className="group hover:bg-white/[0.02] transition-colors cursor-pointer"
+                      onClick={() => openModal(row)}
+                    >
                       <td className="px-6 py-4 bg-[#0a0f1d] border-r border-white/5 w-[160px] min-w-[160px] max-w-[160px]">
                         <div className="flex flex-col gap-1">
                           <span className="text-[9px] font-black text-primary/70 uppercase tracking-tighter">
@@ -522,7 +534,7 @@ export default function PanoramaPage() {
                             <div className={clsx(
                               "w-full h-12 rounded-xl flex items-center justify-center text-xs font-black border transition-all duration-300",
                               getCellColor(score),
-                              !isNaN(score) && "shadow-md group-hover:scale-[1.05]"
+                              !isNaN(score) && "shadow-md group-hover:scale-[1.1] group-hover:z-10 bg-opacity-80 hover:bg-opacity-100"
                             )}>
                               {!isNaN(score) ? score : "-"}
                             </div>
@@ -537,6 +549,12 @@ export default function PanoramaPage() {
           </div>
         )}
       </div>
+
+      <CallDetailsModal 
+        isOpen={modalOpen} 
+        onClose={() => setModalOpen(false)} 
+        row={modalRow} 
+      />
     </DashboardContent>
   );
 }
