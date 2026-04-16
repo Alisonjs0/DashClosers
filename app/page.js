@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import DashboardContent from "@/components/DashboardContent";
 import DashboardStats from "@/components/DashboardStats";
-import SatisfactionChart from "@/components/SatisfactionChart";
 import ClientTable from "@/components/ClientTable";
 import { useDashboardContext } from "@/lib/contexts/DashboardContext";
 import {
@@ -226,7 +225,7 @@ export default function Home() {
                                     <div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Data Início</label><input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-xl py-3 px-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/40 [color-scheme:dark]" /></div><div className="space-y-1.5"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Data Fim</label><input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-xl py-3 px-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/40 [color-scheme:dark]" /></div></div>
                                 </div>
                             </div>
-                            <SatisfactionChart data={filteredData} />
+
                         </div>
 
                         <div className="lg:col-span-9 space-y-6">
