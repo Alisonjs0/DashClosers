@@ -153,87 +153,95 @@ function KPISCard({ icon, label, value, subValue, severity, closerCount }) {
 // ═══════════════════════════════════════════════════════════════════
 
 function FunnelVisualization({ funnelTotal, funnelCTA, funnelConversao }) {
-  // Use actual data from sheets if available, otherwise calculate from reprovacao
   const total = Number(funnelTotal) || 100;
   const cta = Number(funnelCTA) || 75;
-  const conversao = Number(funnelConversao) || 5.6;
+  const conv = Number(funnelConversao) || 5.6;
 
-  // Calculate widths as percentages (100%, 75%, 50% for visual funnel effect)
-  const width1 = 100;
-  const width2 = (cta / total) * 100;
-  const width3 = (conversao / total) * 100;
+  // Configuration - Expanded for full width
+  const svgWidth = 800; // Increased from 450
+  const svgHeight = 350; // Increased from 320
+  const paddingRight = 200; // More space for labels
+  const funnelBaseWidth = svgWidth - paddingRight;
+  
+  // Heights - Equally distributed
+  const h1 = 100;
+  const h2 = 100;
+  const h3 = 100;
+
+  // Strict Proportional Widths
+  const wTop1 = funnelBaseWidth;
+  const wBottom1 = (cta / 100) * funnelBaseWidth;
+  
+  const wTop2 = wBottom1;
+  const wBottom2 = (conv / 100) * funnelBaseWidth;
+  
+  const wTop3 = wBottom2;
+  const wBottom3 = wTop3 * 0.85;
+
+  // Coordinates - Centered in the left area
+  const centerX = funnelBaseWidth / 2 + 20; 
+  
+  const p1 = `M ${centerX - wTop1/2} 0 L ${centerX + wTop1/2} 0 L ${centerX + wBottom1/2} ${h1} L ${centerX - wBottom1/2} ${h1} Z`;
+  const p2 = `M ${centerX - wTop2/2} ${h1 + 4} L ${centerX + wTop2/2} ${h1 + 4} L ${centerX + wBottom2/2} ${h1 + h2} L ${centerX - wBottom2/2} ${h1 + h2} Z`;
+  const p3 = `M ${centerX - wTop3/2} ${h1 + h2 + 4} L ${centerX + wTop3/2} ${h1 + h2 + 4} L ${centerX + wBottom3/2} ${h1 + h2 + h3} L ${centerX - wBottom3/2} ${h1 + h2 + h3} Z`;
 
   return (
-    <div className="w-full space-y-8">
-      <div className="space-y-4">
-        {/* Stage 1 - Full width */}
-        <div className="flex flex-col items-center">
-          <div 
-            className="w-full max-w-xs bg-gradient-to-r from-blue-500/20 via-blue-500/30 to-blue-500/20 border-2 border-blue-500/50 rounded-lg flex items-center justify-center py-4 px-4 relative overflow-hidden shadow-lg shadow-blue-500/10 transition-all duration-500"
-            style={{ width: `${width1}%`, maxWidth: `100%` }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/20 to-blue-500/0 pointer-events-none"></div>
-            <span className="relative font-bold text-blue-100 text-center">
-              <div className="text-lg font-bold">{total.toFixed(0)}%</div>
-              <div className="text-xs text-blue-200">Oportunidades Totais</div>
-            </span>
-          </div>
-        </div>
+    <div className="w-full space-y-6">
+      <div className="relative flex justify-center -mx-4">
+        <svg width="100%" height={svgHeight} viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="overflow-visible max-w-4xl">
+          <defs>
+            <linearGradient id="grad-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#2563eb" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#1e40af" stopOpacity="0.6" />
+            </linearGradient>
+            <linearGradient id="grad-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#d97706" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#92400e" stopOpacity="0.6" />
+            </linearGradient>
+            <linearGradient id="grad-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#065f46" stopOpacity="0.6" />
+            </linearGradient>
+          </defs>
 
-        {/* Funnel line connector */}
-        <div className="flex justify-center">
-          <div className="w-1 h-6 bg-gradient-to-b from-white/20 to-white/5"></div>
-        </div>
+          {/* Paths */}
+          <path d={p1} fill="url(#grad-blue)" stroke="#60a5fa" strokeOpacity="0.5" className="transition-all duration-500 hover:brightness-125 cursor-default" />
+          <path d={p2} fill="url(#grad-gold)" stroke="#fbbf24" strokeOpacity="0.5" className="transition-all duration-500 hover:brightness-125 cursor-default" />
+          <path d={p3} fill="url(#grad-emerald)" stroke="#34d399" strokeOpacity="0.5" className="transition-all duration-500 hover:brightness-125 cursor-default" />
 
-        {/* Stage 2 - Intermediate width */}
-        <div className="flex flex-col items-center">
-          <div 
-            className="max-w-xs bg-gradient-to-r from-amber-500/20 via-amber-500/30 to-amber-500/20 border-2 border-amber-500/50 rounded-lg flex items-center justify-center py-4 px-4 relative overflow-hidden shadow-lg shadow-amber-500/10 transition-all duration-500"
-            style={{ width: `${width2}%`, maxWidth: `100%` }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/20 to-amber-500/0 pointer-events-none"></div>
-            <span className="relative font-bold text-amber-100 text-center text-sm">
-              <div className="text-lg font-bold">{cta.toFixed(0)}%</div>
-              <div className="text-xs text-amber-200">Chegaram ao CTA</div>
-            </span>
-          </div>
-        </div>
+          {/* Value Labels (Inside) */}
+          <text x={centerX} y={h1/2} textAnchor="middle" dy=".3em" fill="white" className="text-3xl font-black italic select-none pointer-events-none">{total.toFixed(0)}%</text>
+          <text x={centerX} y={h1 + h2/2} textAnchor="middle" dy=".3em" fill="white" className="text-2xl font-black italic select-none pointer-events-none">{cta.toFixed(0)}%</text>
+          <text x={centerX} y={h1 + h2 + h3/2} textAnchor="middle" dy=".3em" fill="white" className="text-xl font-black italic select-none pointer-events-none">{conv.toFixed(1)}%</text>
 
-        {/* Funnel line connector */}
-        <div className="flex justify-center">
-          <div className="w-1 h-6 bg-gradient-to-b from-white/20 to-white/5"></div>
-        </div>
-
-        {/* Stage 3 - Smallest width */}
-        <div className="flex flex-col items-center">
-          <div 
-            className="max-w-xs bg-gradient-to-r from-emerald-500/20 via-emerald-500/30 to-emerald-500/20 border-2 border-emerald-500/50 rounded-lg flex items-center justify-center py-4 px-4 relative overflow-hidden shadow-lg shadow-emerald-500/10 transition-all duration-500"
-            style={{ width: `${width3}%`, maxWidth: `100%` }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/20 to-emerald-500/0 pointer-events-none"></div>
-            <span className="relative font-bold text-emerald-100 text-center text-sm">
-              <div className="text-lg font-bold">{conversao.toFixed(1)}%</div>
-              <div className="text-xs text-emerald-200">Converteram</div>
-            </span>
-          </div>
-        </div>
+          {/* Labels (Outside Right) */}
+          <g transform={`translate(${centerX + wTop1/2 + 25}, ${h1/2})`}>
+            <text fill="#60a5fa" className="text-xs font-black uppercase tracking-widest">Oportunidades (100%)</text>
+          </g>
+          <g transform={`translate(${centerX + wTop1/2 + 25}, ${h1 + h2/2})`}>
+            <text fill="#fbbf24" className="text-xs font-black uppercase tracking-widest">Oferta / CTA ({cta.toFixed(0)}%)</text>
+          </g>
+          <g transform={`translate(${centerX + wTop1/2 + 25}, ${h1 + h2 + h3/2})`}>
+            <text fill="#34d399" className="text-xs font-black uppercase tracking-widest">Fechamento ({conv.toFixed(1)}%)</text>
+          </g>
+        </svg>
       </div>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-2 mt-8 pt-4 border-t border-white/5">
-          <div className="text-center">
-            <div className="text-xs text-white/40">Taxa CTA</div>
-            <div className="text-sm font-bold text-white">{((cta / total) * 100).toFixed(0)}%</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xs text-white/40">Taxa Conversão</div>
-            <div className="text-sm font-bold text-white">{((conversao / cta) * 100).toFixed(1)}%</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xs text-white/40">Taxa Total</div>
-            <div className="text-sm font-bold text-white">{((conversao / total) * 100).toFixed(1)}%</div>
-          </div>
+      {/* Stats Row */}
+      <div className="grid grid-cols-3 gap-2 px-4 pt-4 border-t border-white/5">
+        <div className="text-center group">
+          <div className="text-xs text-white/30 uppercase tracking-tighter">Eficiência CTA</div>
+          <div className="text-base font-black text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">{((cta / total) * 100).toFixed(0)}%</div>
         </div>
+        <div className="text-center group">
+          <div className="text-xs text-white/30 uppercase tracking-tighter">Conversão CTA</div>
+          <div className="text-base font-black text-white group-hover:text-amber-400 transition-colors uppercase tracking-tight">{((conv / cta) * 100).toFixed(1)}%</div>
+        </div>
+        <div className="text-center group">
+          <div className="text-xs text-white/30 uppercase tracking-tighter">Taxa Geral</div>
+          <div className="text-base font-black text-white group-hover:text-emerald-400 transition-colors uppercase tracking-tight">{((conv / total) * 100).toFixed(1)}%</div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -646,8 +654,57 @@ export default function RelatoriosPage() {
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState(null);
+  const [selectedReportIndex, setSelectedReportIndex] = useState(null);
+  
+  // Drag to scroll logic
+  const scrollRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const startDragging = (e) => {
+    setIsDragging(true);
+    setStartX(e.pageX - scrollRef.current.offsetLeft);
+    setScrollLeft(scrollRef.current.scrollLeft);
+  };
+
+  const stopDragging = () => {
+    setIsDragging(false);
+  };
+
+  const move = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // Scroll speed
+    scrollRef.current.scrollLeft = scrollLeft - walk;
+  };
 
   const SHEET_URL = "https://docs.google.com/spreadsheets/d/1nzSfmHlbs5FPUsLrcaJNQhdHCqEWyP9Lf6yaF-7vFhI/export?format=csv&gid=2092544085";
+
+  // ─────────────────────────────────────────────────────────────
+  // REPORT HISTORY DISCOVERY
+  // ─────────────────────────────────────────────────────────────
+
+  const reportRows = useMemo(() => {
+    // We look for rows that have the 'ranking' column populated (indicating an IA summary row)
+    const rows = data
+      .map((row, index) => ({ ...row, originalIndex: index }))
+      .filter(row => {
+        const ranking = (row.ranking || "").toString().trim();
+        return ranking && (ranking.startsWith('[') || ranking.startsWith('{'));
+      });
+    
+    // Sort by latest first (highest index)
+    return [...rows].reverse();
+  }, [data]);
+
+  // Default to the first (latest) report row
+  useEffect(() => {
+    if (reportRows.length > 0 && selectedReportIndex === null) {
+      setSelectedReportIndex(reportRows[0].originalIndex);
+    }
+  }, [reportRows, selectedReportIndex]);
 
   // ─────────────────────────────────────────────────────────────
   // FETCH DATA
@@ -721,8 +778,11 @@ export default function RelatoriosPage() {
   // ─────────────────────────────────────────────────────────────
 
   const latestAnalysis = useMemo(() => {
-    if (data.length === 0) return null;
-    const row = data[data.length - 1]; // Alterado para pegar SEMPRE a última linha
+    if (reportRows.length === 0) return null;
+    
+    // Use the selected index or fallback to the latest discovered report
+    const row = selectedReportIndex !== null ? data[selectedReportIndex] : reportRows[0];
+    if (!row) return null;
     
     // Debug: Log available columns
     if (Object.keys(row).length > 0) {
@@ -740,14 +800,16 @@ export default function RelatoriosPage() {
       objecoes = parseJSONSafely(row["ObjeÃ§Ãµes"]) || [];
     }
 
-    // Filter out invalid closers (e.g. "Ni", "Não informado")
-    const blacklist = ["NÃO INFORMADO", "NÃO IDENTIFICADO", "NÃO INFORMADA", "DESCONHECIDO", "NI", "NÃO", "N/A", "N.A", "NÃO IDENTIFICADA", "REUNIÃO INTERNA", "REUNIAO INTERNA", "REUNIÃO ALINHAMENTO", "TREINAMENTO"];
+    // Filter out invalid closers and respect the whitelist
+    const whitelist = ["HENRIQUE", "BRUNO BORGES", "CARLOS SILVA", "GUSTAVO EMANUEL"];
     const filteredIndices = [];
     
     const rankingArr = Array.isArray(ranking) ? ranking : Object.values(ranking);
     rankingArr.forEach((item, idx) => {
       const name = (item.nome || item.name || item.closer_nome || "").toString().toUpperCase().trim();
-      if (name && !blacklist.includes(name) && !name.includes("REUNIÃO") && !name.includes("REUNIAO") && !name.includes("INTERNA")) {
+      const isWhitelisted = whitelist.some(w => name === w || name.includes(w));
+      
+      if (name && isWhitelisted) {
         filteredIndices.push(idx);
       }
     });
@@ -903,22 +965,32 @@ export default function RelatoriosPage() {
         {/* FILTRO DE CLOSER */}
         {/* ═══════════════════════════════════════════════════════ */}
 
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4 bg-card/30 backdrop-blur-xl border border-white/5 rounded-2xl p-2 px-4">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-4 bg-card/30 backdrop-blur-xl border border-white/5 rounded-2xl p-2 px-4 shadow-xl">
             <div className="flex items-center gap-2 text-white/40 border-r border-white/10 pr-4 mr-2">
               <User size={16} />
-              <span className="text-xs font-bold uppercase tracking-wider">Filtrar Closer</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Squad</span>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+            <div 
+              ref={scrollRef}
+              onMouseDown={startDragging}
+              onMouseLeave={stopDragging}
+              onMouseUp={stopDragging}
+              onMouseMove={move}
+              className={clsx(
+                "flex gap-2 overflow-x-auto pb-1 no-scrollbar max-w-[400px] cursor-grab active:cursor-grabbing select-none",
+                isDragging && "cursor-grabbing"
+              )}
+            >
               {closersList.map(closer => (
                 <button
                   key={closer}
-                  onClick={() => setSelectedCloser(closer)}
+                  onClick={() => !isDragging && setSelectedCloser(closer)}
                   className={clsx(
                     "px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-300 border capitalize flex-shrink-0",
                     selectedCloser === closer 
                       ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" 
-                      : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10"
+                      : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 text-white/60"
                   )}
                 >
                   {String(closer).replaceAll("_", " ")}
@@ -926,17 +998,44 @@ export default function RelatoriosPage() {
               ))}
             </div>
           </div>
+
           <div className="flex items-center gap-3">
+             {/* Report History Selector */}
+             {reportRows.length > 0 && (
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                    <Calendar size={14} className="text-primary" />
+                  </div>
+                  <select 
+                    value={selectedReportIndex || reportRows[0].originalIndex}
+                    onChange={(e) => setSelectedReportIndex(Number(e.target.value))}
+                    className="appearance-none bg-primary/10 border border-primary/30 rounded-2xl pl-10 pr-10 py-3 text-xs font-black text-white uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer hover:bg-primary/20"
+                  >
+                    {reportRows.map((report, idx) => (
+                      <option key={report.originalIndex} value={report.originalIndex} className="bg-[#0f172a]">
+                        Report #{reportRows.length - idx} — {(report["Data"] || report["_timestamp"] || "Data N/A").split('T')[0]}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-primary/50">
+                    <ChevronDown size={14} />
+                  </div>
+                </div>
+             )}
+
             <button
-              disabled={true}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 border bg-white/5 text-white/20 border-white/5 cursor-not-allowed opacity-50"
+              onClick={handleSendToWebhook}
+              disabled={sending}
+              className={clsx(
+                "flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 border shadow-lg shadow-emerald-500/10",
+                sending 
+                  ? "bg-white/5 text-white/20 border-white/5 cursor-not-allowed opacity-50" 
+                  : "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500"
+              )}
             >
               <Zap size={14} />
-              Webhook Desativado
+              {sending ? "Enviando..." : "Sincronizar N8N"}
             </button>
-            <div className="hidden md:flex items-center gap-2 text-white/30 text-xs bg-white/5 px-3 py-2 rounded-xl border border-white/5">
-              <Calendar size={14} /> <span className="uppercase tracking-tighter font-bold">Última Semana</span>
-            </div>
           </div>
         </div>
 
