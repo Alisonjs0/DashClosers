@@ -85,7 +85,10 @@ export default function DoresPage() {
     });
 
     const activeClosers = Object.entries(closerCounts)
-      .filter(([_, count]) => count > 2)
+      .filter(([name, count]) => {
+        const upper = name.toUpperCase().trim();
+        return count > 2 && upper !== "NÃO INFORMADO" && upper !== "NI" && upper !== "NÃO" && upper !== "DESCONHECIDO";
+      })
       .map(([name]) => name)
       .sort();
     

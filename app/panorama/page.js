@@ -19,6 +19,18 @@ export default function PanoramaPage() {
   const [lastCallsLimit, setLastCallsLimit] = useState(10);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalRow, setModalRow] = useState(null);
+  
+  // Custom Report Selection State (Exclusion logic: everything is included by default)
+  const [excludedKeys, setExcludedKeys] = useState(new Set());
+
+  const toggleRow = (key) => {
+    setExcludedKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const openModal = (row) => {
     setModalRow(row);
@@ -148,11 +160,54 @@ export default function PanoramaPage() {
         }
       });
       delete processedRow._scores;
+      
+      // Add unique key for selection
+      const clientKey = (row["Empresa (Cliente)"] || "").toString().trim();
+      const closerKey = (row["Closer"] || "").toString().trim();
+      const dateKey = (row["Data"] || "").toString().trim();
+      processedRow._key = `${clientKey}|${closerKey}|${dateKey}`;
+      
       return processedRow;
     });
+    
+    // 5. Aplicar limite de calls se houver
+    if (lastCallsLimit && lastCallsLimit !== 9999) {
+      return finalData.slice(0, lastCallsLimit);
+    }
 
     return finalData;
-  }, [data, dateFrom, dateTo, sdrFilter]);
+  }, [data, dateFrom, dateTo, sdrFilter, lastCallsLimit]);
+
+  const currentReportStats = useMemo(() => {
+    // We calculate stats for all filtered data EXCEPT those in excludedKeys
+    const includedRows = filteredData.filter(row => !excludedKeys.has(row._key));
+    
+    if (includedRows.length === 0) return null;
+
+    const stats = {};
+    SCORE_KEYS.forEach(key => {
+      const scores = includedRows.map(row => parseScore(row[key])).filter(s => !isNaN(s));
+      stats[key] = scores.length > 0 
+        ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
+        : null;
+    });
+    
+    return {
+      count: includedRows.length,
+      averages: stats,
+      hasExclusions: excludedKeys.size > 0
+    };
+  }, [filteredData, excludedKeys]);
+
+  const toggleAll = () => {
+    if (excludedKeys.size > 0) {
+      // If there are exclusions, reset to include everything
+      setExcludedKeys(new Set());
+    } else {
+      // If everything is included, exclude everything
+      setExcludedKeys(new Set(filteredData.map(r => r._key)));
+    }
+  };
   
   // Reset page when filters change
   useEffect(() => {
@@ -256,23 +311,21 @@ export default function PanoramaPage() {
               </div>
             </div>
 
-            {viewMode === 'average' && (
-              <div className="flex flex-col gap-1.5 bg-white/5 p-4 rounded-3xl border border-white/5 backdrop-blur-xl shadow-inner">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Analisar Últimas Calls</label>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={lastCallsLimit}
-                    onChange={(e) => setLastCallsLimit(Number(e.target.value))}
-                    className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-200 focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer min-w-[120px]"
-                  >
-                    {[5, 10, 20, 50, 100].map(num => (
-                      <option key={num} value={num} className="bg-[#0f172a]">{num} Calls</option>
-                    ))}
-                    <option value={9999} className="bg-[#0f172a]">Todas</option>
-                  </select>
-                </div>
+            <div className="flex flex-col gap-1.5 bg-white/5 p-4 rounded-3xl border border-white/5 backdrop-blur-xl shadow-inner">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Analisar Últimas Calls</label>
+              <div className="flex items-center gap-2">
+                <select
+                  value={lastCallsLimit}
+                  onChange={(e) => setLastCallsLimit(Number(e.target.value))}
+                  className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-200 focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer min-w-[120px]"
+                >
+                  {[5, 10, 20, 50, 100].map(num => (
+                    <option key={num} value={num} className="bg-[#0f172a]">{num} Calls</option>
+                  ))}
+                  <option value={9999} className="bg-[#0f172a]">Todas</option>
+                </select>
               </div>
-            )}
+            </div>
 
             {viewMode === 'detailed' && (
               <div className="flex flex-wrap items-center gap-4 bg-white/5 p-4 rounded-3xl border border-white/5 backdrop-blur-xl animate-fade-in shadow-inner">
@@ -428,6 +481,58 @@ export default function PanoramaPage() {
           /* Section 2: General Heatmap (Paginated Row-by-Row) */
           <div className="glass-card rounded-none border border-white/5 bg-[#0a0f1d]/40 backdrop-blur-3xl shadow-2xl w-full max-w-full">
             <div className="sticky top-0 z-[60] bg-[#0a0f1d] border-b border-white/10 shadow-2xl rounded-none overflow-hidden">
+              {/* Selection Summary Bar (Always showing when in detailed mode) */}
+              {viewMode === 'detailed' && currentReportStats && (
+                <div className={clsx(
+                  "border-b p-6 flex flex-col md:flex-row items-center gap-6 animate-in slide-in-from-top duration-500 transition-colors",
+                  currentReportStats.hasExclusions ? "bg-amber-500/10 border-amber-500/20" : "bg-primary/10 border-primary/20"
+                )}>
+                  <div className="flex items-center gap-4">
+                    <div className={clsx(
+                      "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-colors",
+                      currentReportStats.hasExclusions ? "bg-amber-500/20 text-amber-500 shadow-amber-500/20" : "bg-primary/20 text-primary shadow-primary/20"
+                    )}>
+                      <TrendingUp size={24} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-black opacity-70 uppercase tracking-[0.2em]">
+                        {currentReportStats.hasExclusions ? "Personalizado (Filtro Ativo)" : "Performance Total"}
+                      </div>
+                      <div className="text-xl font-black text-white italic uppercase tracking-tight">Médias de {currentReportStats.count} Calls</div>
+                    </div>
+                  </div>
+                  
+                  <div className="h-10 w-px bg-white/10 hidden md:block" />
+                  
+                  <div className="flex-1 overflow-x-auto custom-scrollbar-thin flex gap-4 pr-4">
+                    {SCORE_KEYS.map(key => {
+                      const avg = currentReportStats.averages[key];
+                      return (
+                        <div key={key} className="flex flex-col items-center min-w-[70px]">
+                          <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider mb-1 text-center truncate w-full">{key}</span>
+                          <span className={clsx(
+                            "text-base font-black italic tracking-tighter",
+                            avg >= 8 ? "text-emerald-400" : avg >= 5 ? "text-amber-400" : "text-rose-400"
+                          )}>
+                            {avg || "-"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {currentReportStats.hasExclusions && (
+                    <button 
+                      onClick={() => setExcludedKeys(new Set())}
+                      className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all flex items-center gap-2 group whitespace-nowrap"
+                    >
+                      <X size={14} className="group-hover:rotate-90 transition-transform" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Resetar Filtros</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="p-8 flex items-center justify-between">
                 <h3 className="text-xl font-black text-white uppercase italic tracking-tight">Histórico de Notas Detalhado</h3>
                 
@@ -485,8 +590,17 @@ export default function PanoramaPage() {
               <table className="w-full border-collapse min-w-[1100px]">
                 <thead>
                   <tr className="bg-[#0a0f1d]">
-                    <th className="px-6 py-6 text-left border-b border-white/5 bg-[#0a0f1d] w-[160px] min-w-[160px] max-w-[160px]">
-                      <span className="text-[10px] uppercase font-black text-slate-500 tracking-[0.2em]">Data / Cliente / Closer</span>
+                    <th className="px-6 py-6 text-center border-b border-white/5 bg-[#0a0f1d] w-[60px] min-w-[60px] max-w-[60px]">
+                      <input 
+                        type="checkbox" 
+                        checked={excludedKeys.size === 0 && filteredData.length > 0}
+                        onChange={toggleAll}
+                        className="w-4 h-4 rounded border-white/20 bg-white/5 text-primary focus:ring-primary/40 focus:ring-offset-0 cursor-pointer"
+                        title={excludedKeys.size > 0 ? "Restaurar todas" : "Excluir todas"}
+                      />
+                    </th>
+                    <th className="px-6 py-6 text-left border-b border-white/5 bg-[#0a0f1d] w-[140px] min-w-[140px] max-w-[140px]">
+                      <span className="text-[10px] uppercase font-black text-slate-500 tracking-[0.2em]">Data / Cliente</span>
                     </th>
                     {SCORE_KEYS.map(key => (
                       <th key={key} className="px-2 py-6 text-center border-b border-white/5 min-w-[75px]">
@@ -511,10 +625,21 @@ export default function PanoramaPage() {
                   {paginatedRows.map((row, idx) => (
                     <tr 
                       key={idx} 
-                      className="group hover:bg-white/[0.02] transition-colors cursor-pointer"
-                      onClick={() => openModal(row)}
+                      className={clsx(
+                        "group transition-all cursor-pointer border-l-4",
+                        !excludedKeys.has(row._key) ? "bg-primary/[0.03] border-primary" : "hover:bg-white/[0.02] border-transparent opacity-20 grayscale"
+                      )}
+                      onClick={() => toggleRow(row._key)}
                     >
-                      <td className="px-6 py-4 bg-[#0a0f1d] border-r border-white/5 w-[160px] min-w-[160px] max-w-[160px]">
+                      <td className="px-6 py-4 text-center bg-transparent w-[60px] min-w-[60px] max-w-[60px]">
+                        <input 
+                          type="checkbox" 
+                          checked={!excludedKeys.has(row._key)}
+                          onChange={(e) => { e.stopPropagation(); toggleRow(row._key); }}
+                          className="w-4 h-4 rounded border-white/20 bg-white/5 text-primary focus:ring-primary/40 focus:ring-offset-0 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-6 py-4 bg-transparent border-r border-white/5 w-[140px] min-w-[140px] max-w-[140px]">
                         <div className="flex flex-col gap-1">
                           <span className="text-[9px] font-black text-primary/70 uppercase tracking-tighter">
                             {row["Data"] ? new Date(parseRowDate(row["Data"])).toLocaleDateString('pt-BR') : "-"}
@@ -522,9 +647,18 @@ export default function PanoramaPage() {
                           <span className="text-[11px] font-black text-white uppercase italic truncate">
                             {row["Empresa (Cliente)"]}
                           </span>
-                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">
-                            {row["Closer"]}
-                          </span>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">
+                              {row["Closer"]}
+                            </span>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); openModal(row); }}
+                              className="p-1 rounded-md hover:bg-white/10 text-slate-500 hover:text-primary transition-colors"
+                              title="Ver Detalhes"
+                            >
+                              <Search size={12} />
+                            </button>
+                          </div>
                         </div>
                       </td>
                       {SCORE_KEYS.map(key => {

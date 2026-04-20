@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { clsx } from "clsx";
+import { isValidReport } from "@/lib/utils";
 
 // ═══════════════════════════════════════════════════════════════════
 // HELPER FUNCTIONS
@@ -658,7 +659,10 @@ export default function RelatoriosPage() {
       try {
         const res = await fetch(`/api/sheets?url=` + encodeURIComponent(SHEET_URL));
         const json = await res.json();
-        if (json.data) setData(json.data);
+        if (json.data) {
+          const filtered = json.data.filter(isValidReport);
+          setData(filtered);
+        }
       } catch (error) {
         console.error("Erro ao carregar relatórios:", error);
       } finally {
@@ -736,7 +740,22 @@ export default function RelatoriosPage() {
       objecoes = parseJSONSafely(row["ObjeÃ§Ãµes"]) || [];
     }
 
-    // Normalize field names and decode special characters
+    // Filter out invalid closers (e.g. "Ni", "Não informado")
+    const blacklist = ["NÃO INFORMADO", "NÃO IDENTIFICADO", "NÃO INFORMADA", "DESCONHECIDO", "NI", "NÃO", "N/A", "N.A"];
+    const filteredIndices = [];
+    
+    const rankingArr = Array.isArray(ranking) ? ranking : Object.values(ranking);
+    rankingArr.forEach((item, idx) => {
+      const name = (item.nome || item.name || item.closer_nome || "").toString().toUpperCase().trim();
+      if (name && !blacklist.includes(name) && !name.includes("REUNIÃO INTERNA") && !name.includes("REUNIAO INTERNA")) {
+        filteredIndices.push(idx);
+      }
+    });
+
+    const finalRanking = filteredIndices.map(idx => rankingArr[idx]);
+    const finalDores = filteredIndices.map(idx => (Array.isArray(dores) ? dores[idx] : Object.values(dores)[idx]) || []);
+    const finalObjecoes = filteredIndices.map(idx => (Array.isArray(objecoes) ? objecoes[idx] : Object.values(objecoes)[idx]) || []);
+
     const normalized = {
       ...row,
       // Decode UTF-8 fields that might have encoding issues
@@ -750,10 +769,10 @@ export default function RelatoriosPage() {
       "Funil Conversao": Number((row["Funil Conversao"] || "5.6").toString().replace(",", ".")),
       "plano acao": decodeUTF8(row["plano acao"] || ""),
       "Plano acao semanal": decodeUTF8(row["Plano acao semanal"] || ""),
-      ranking: Array.isArray(ranking) ? ranking : Object.values(ranking),
+      ranking: finalRanking,
       estrategia: Array.isArray(estrategia) ? estrategia : Object.values(estrategia),
-      dores: Array.isArray(dores) ? dores : Object.values(dores),
-      objecoes: Array.isArray(objecoes) ? objecoes : Object.values(objecoes)
+      dores: finalDores,
+      objecoes: finalObjecoes
     };
 
     console.log("Parsed data:", {
