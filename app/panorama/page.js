@@ -170,17 +170,21 @@ export default function PanoramaPage() {
       return processedRow;
     });
     
-    // 5. Aplicar limite de calls se houver
-    if (lastCallsLimit && lastCallsLimit !== 9999) {
-      return finalData.slice(0, lastCallsLimit);
-    }
-
+    // 5. Ordenar e retornar tudo (o corte será feito pelos consumidores)
     return finalData;
-  }, [data, dateFrom, dateTo, sdrFilter, lastCallsLimit]);
+  }, [data, dateFrom, dateTo, sdrFilter]);
+
+  // 1.5 Global limit for Detailed View (Histórico Geral)
+  const globalLimitedData = useMemo(() => {
+    if (lastCallsLimit && lastCallsLimit !== 9999) {
+      return filteredData.slice(0, lastCallsLimit);
+    }
+    return filteredData;
+  }, [filteredData, lastCallsLimit]);
 
   const currentReportStats = useMemo(() => {
-    // We calculate stats for all filtered data EXCEPT those in excludedKeys
-    const includedRows = filteredData.filter(row => !excludedKeys.has(row._key));
+    // We calculate stats for the LIMITED data EXCEPT those in excludedKeys
+    const includedRows = globalLimitedData.filter(row => !excludedKeys.has(row._key));
     
     if (includedRows.length === 0) return null;
 
@@ -197,7 +201,7 @@ export default function PanoramaPage() {
       averages: stats,
       hasExclusions: excludedKeys.size > 0
     };
-  }, [filteredData, excludedKeys]);
+  }, [globalLimitedData, excludedKeys]);
 
   const toggleAll = () => {
     if (excludedKeys.size > 0) {
@@ -205,20 +209,20 @@ export default function PanoramaPage() {
       setExcludedKeys(new Set());
     } else {
       // If everything is included, exclude everything
-      setExcludedKeys(new Set(filteredData.map(r => r._key)));
+      setExcludedKeys(new Set(globalLimitedData.map(r => r._key)));
     }
   };
   
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [dateFrom, dateTo, sdrFilter]);
+  }, [dateFrom, dateTo, sdrFilter, lastCallsLimit]);
 
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const totalPages = Math.ceil(globalLimitedData.length / itemsPerPage);
   const paginatedRows = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return filteredData.slice(start, start + itemsPerPage);
-  }, [filteredData, currentPage, itemsPerPage]);
+    return globalLimitedData.slice(start, start + itemsPerPage);
+  }, [globalLimitedData, currentPage, itemsPerPage]);
 
   // Matrix Data: [Closer][Competency] -> Avg Score
   const matrixData = useMemo(() => {

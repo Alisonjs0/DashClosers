@@ -33,6 +33,7 @@ export default function Home() {
     const [meetingFilter, setMeetingFilter] = useState("all");
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
+    const [hideUseless, setHideUseless] = useState(true);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -41,16 +42,17 @@ export default function Home() {
     // Reset pagination on filter change
     useMemo(() => {
         setCurrentPage(1);
-    }, [searchTerm, sdrFilter, meetingFilter, dateFrom, dateTo]);
+    }, [searchTerm, sdrFilter, meetingFilter, dateFrom, dateTo, hideUseless]);
 
     // Memoized Filtered Data
     const filteredData = useMemo(() => {
-        const blacklist = ["NÃO INFORMADO", "NÃO IDENTIFICADO", "NÃO INFORMADA", "DESCONHECIDO"];
+        const blacklist = ["NÃO INFORMADO", "NÃO IDENTIFICADO", "NÃO INFORMADA", "DESCONHECIDO", "NI", "NÃO", "N/A", "N.A"];
         
         // 1. Filtragem inicial
         const filtered = data.filter((item) => {
             const empresa = (item["Empresa (Cliente)"] || "").toLowerCase();
             const closer = (item["Closer"] || "").toLowerCase();
+            const status = (item["Status"] || "").toLowerCase();
             const closed = isClosed(item["Status"]);
             const rowDate = parseRowDate(item["Data"]);
 
@@ -64,6 +66,24 @@ export default function Home() {
             const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
             
             const isBlacklisted = blacklist.includes(closer.toUpperCase()) || blacklist.includes(empresa.toUpperCase());
+
+            // Critérios de "Useless" (Inútil)
+            if (hideUseless) {
+                // 1. Negociação perdida
+                if (status.includes("perdida")) return false;
+                
+                // 2. Nota inferior a 1 (ou sem todas as notas)
+                const scores = SCORE_KEYS.map(k => parseScore(item[k])).filter(s => !isNaN(s));
+                if (scores.length > 0) {
+                    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+                    if (avg < 1) return false;
+                } else {
+                    // Se não tem nenhuma nota e não foi fechado, consideramos inútil?
+                    // O usuário pediu "nota inferior a 1", se não tem nota, a média é indefinida.
+                    // Vamos filtrar se não tiver nenhuma nota e não estiver fechado.
+                    if (!closed) return false;
+                }
+            }
 
             return matchesSearch && matchesSdr && matchesMeeting && matchesFrom && matchesTo && !isBlacklisted;
         });
@@ -223,6 +243,24 @@ export default function Home() {
                                     <div className="space-y-1.5"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Filtrar por Closer</label><select value={sdrFilter} onChange={(e) => setSdrFilter(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-xl py-3 px-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer"><option value="all" className="bg-[#0f172a]">Todos os Closers</option>{closers.map(s => (<option key={s} value={s} className="bg-[#0f172a]">{s}</option>))}</select></div>
                                     <div className="space-y-1.5"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Status da Reunião</label><select value={meetingFilter} onChange={(e) => setMeetingFilter(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-xl py-3 px-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer"><option value="all" className="bg-[#0f172a]">Todos os Status</option><option value="yes" className="bg-[#0f172a]">Fechado/Vendido</option><option value="no" className="bg-[#0f172a]">Pendente/Outros</option></select></div>
                                     <div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Data Início</label><input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-xl py-3 px-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/40 [color-scheme:dark]" /></div><div className="space-y-1.5"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Data Fim</label><input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-xl py-3 px-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/40 [color-scheme:dark]" /></div></div>
+                                    
+                                    <div className="pt-2">
+                                        <label className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 cursor-pointer hover:bg-white/10 transition-all select-none">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-white uppercase tracking-wider">Limpeza Automática</span>
+                                                <span className="text-[8px] text-slate-500 font-bold uppercase mt-0.5">Ocultar calls sem utilidade</span>
+                                            </div>
+                                            <div className="relative">
+                                                <input 
+                                                    type="checkbox" 
+                                                    className="sr-only peer" 
+                                                    checked={hideUseless}
+                                                    onChange={(e) => setHideUseless(e.target.checked)}
+                                                />
+                                                <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                                            </div>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
 
