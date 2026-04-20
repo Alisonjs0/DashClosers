@@ -61,7 +61,7 @@ export default function PanoramaPage() {
   };
 
   const filteredData = useMemo(() => {
-    const blacklist = ["NÃO INFORMADO", "NÃO IDENTIFICADO", "NÃO INFORMADA", "DESCONHECIDO"];
+    const blacklist = ["NÃO INFORMADO", "NÃO IDENTIFICADO", "NÃO INFORMADA", "DESCONHECIDO", "NI", "NÃO", "N.A", "N/A"];
     
     // 1. Filtragem inicial (Closers permitidos, datas, SDR e Blacklist)
     const filtered = data.filter((item) => {

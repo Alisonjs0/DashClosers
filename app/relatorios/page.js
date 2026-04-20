@@ -741,13 +741,13 @@ export default function RelatoriosPage() {
     }
 
     // Filter out invalid closers (e.g. "Ni", "Não informado")
-    const blacklist = ["NÃO INFORMADO", "NÃO IDENTIFICADO", "NÃO INFORMADA", "DESCONHECIDO", "NI", "NÃO", "N/A", "N.A"];
+    const blacklist = ["NÃO INFORMADO", "NÃO IDENTIFICADO", "NÃO INFORMADA", "DESCONHECIDO", "NI", "NÃO", "N/A", "N.A", "NÃO IDENTIFICADA", "REUNIÃO INTERNA", "REUNIAO INTERNA", "REUNIÃO ALINHAMENTO", "TREINAMENTO"];
     const filteredIndices = [];
     
     const rankingArr = Array.isArray(ranking) ? ranking : Object.values(ranking);
     rankingArr.forEach((item, idx) => {
       const name = (item.nome || item.name || item.closer_nome || "").toString().toUpperCase().trim();
-      if (name && !blacklist.includes(name) && !name.includes("REUNIÃO INTERNA") && !name.includes("REUNIAO INTERNA")) {
+      if (name && !blacklist.includes(name) && !name.includes("REUNIÃO") && !name.includes("REUNIAO") && !name.includes("INTERNA")) {
         filteredIndices.push(idx);
       }
     });

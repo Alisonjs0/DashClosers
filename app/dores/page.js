@@ -87,7 +87,8 @@ export default function DoresPage() {
     const activeClosers = Object.entries(closerCounts)
       .filter(([name, count]) => {
         const upper = name.toUpperCase().trim();
-        return count > 2 && upper !== "NÃO INFORMADO" && upper !== "NI" && upper !== "NÃO" && upper !== "DESCONHECIDO";
+        const blacklist = ["NÃO INFORMADO", "NÃO IDENTIFICADO", "NÃO INFORMADA", "DESCONHECIDO", "NI", "NÃO", "N.A", "N/A", "NÃO IDENTIFICADA", "REUNIÃO INTERNA", "REUNIAO INTERNA"];
+        return count > 2 && !blacklist.includes(upper) && !upper.includes("REUNIÃO") && !upper.includes("INTERNA");
       })
       .map(([name]) => name)
       .sort();
