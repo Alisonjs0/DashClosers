@@ -165,18 +165,37 @@ export default function CallDetailsModal({ isOpen, onClose, row }) {
     }, [isOpen, row]);
 
     const fetchTranscript = async (url) => {
-        if (!url) return;
+        if (!url) {
+            setTranscript("URL da transcrição não fornecida.");
+            return;
+        }
+
         setIsLoadingTranscript(true);
+        setTranscript(""); // Clear previous state
+        
         try {
+            console.log('Fetching transcript for:', url);
             const response = await fetch(`/api/transcript?url=${encodeURIComponent(url)}`);
+            
             if (response.ok) {
                 const text = await response.text();
-                setTranscript(text);
+                if (!text || text.trim() === "") {
+                    setTranscript("A transcrição está vazia.");
+                } else {
+                    setTranscript(text);
+                }
             } else {
-                setTranscript("Não foi possível carregar a transcrição. Verifique se o documento está público.");
+                // Try to parse JSON error from server
+                try {
+                    const errorData = await response.json();
+                    setTranscript(errorData.error || "Erro ao carregar a transcrição.");
+                } catch (e) {
+                    setTranscript(`Erro ${response.status}: Não foi possível carregar a transcrição.`);
+                }
             }
         } catch (error) {
-            setTranscript("Erro ao conectar com o servidor.");
+            console.error('Fetch transcript error:', error);
+            setTranscript("Erro de conexão ao buscar a transcrição. Verifique sua rede.");
         } finally {
             setIsLoadingTranscript(false);
         }
@@ -191,20 +210,25 @@ export default function CallDetailsModal({ isOpen, onClose, row }) {
 
         if (nextState) {
             setTranscript("");
-            let url = type === "docs" 
-                ? row["Transcrição Completa"] 
-                : row["Transcrição completa - Tqctiq"];
             
-            if (!url && type === "docs") url = row["Transcrição completa"];
-            if (!url && type === "tactiq") url = row["Transcrição completa - Tactiq"];
+            // Consolidate possible transcript column names
+            let url = "";
+            if (type === "docs") {
+                url = row["Transcrição Completa"] || row["Transcrição completa"] || row["Transcript"];
+            } else {
+                url = row["Transcrição completa - Tactiq"] || row["Transcrição completa - Tqctiq"] || row["Tactiq Transcript"];
+            }
             
-            if (url) {
+            console.log(`Attempting to open ${type} transcript... found URL:`, url);
+
+            if (url && url.trim() !== "") {
                 fetchTranscript(url);
             } else {
-                setTranscript("Nenhum link de transcrição encontrado para este formato.");
+                setTranscript(`Nenhum link de transcrição (${type}) encontrado para este registro.`);
             }
         }
     };
+
 
     const handleCopy = () => {
         navigator.clipboard.writeText(transcript);
