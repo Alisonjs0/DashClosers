@@ -17,7 +17,8 @@ import {
   TrendingUp,
   Download,
   Zap,
-  X
+  X,
+  Loader2
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { clsx } from "clsx";
@@ -102,6 +103,157 @@ const parseActionPlan = (text) => {
     .filter(s => s && s.length > 5);
   return steps;
 };
+
+// ═══════════════════════════════════════════════════════════════════
+// BLOCO: MODAIS DE APOIO
+// ═══════════════════════════════════════════════════════════════════
+
+function SyncProgressModal({ open, onClose, isComplete, error }) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-card border border-white/10 rounded-3xl max-w-sm w-full p-8 text-center space-y-6 shadow-2xl animate-in zoom-in-95 duration-300">
+        <div className="relative mx-auto w-20 h-20">
+          {!isComplete && !error && (
+            <>
+              <div className="absolute inset-0 rounded-full border-4 border-primary/20"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+            </>
+          )}
+          <div className="absolute inset-0 flex items-center justify-center">
+            {error ? (
+              <AlertTriangle className="text-red-500" size={32} />
+            ) : isComplete ? (
+              <Check className="text-emerald-500 scale-125 transition-transform duration-500" size={32} />
+            ) : (
+              <Zap className="text-primary animate-pulse" size={32} />
+            )}
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold text-white">
+            {error ? "Erro na Sincronização" : isComplete ? "Sucesso!" : "Sincronizando Dados"}
+          </h2>
+          <p className="text-sm text-white/60 leading-relaxed">
+            {error 
+              ? "Ocorreu um problema ao enviar os dados para o N8N. Tente novamente." 
+              : isComplete 
+                ? "Os dados foram enviados com sucesso para a automação." 
+                : "Estamos processando as informações e disparando o gatilho para o N8N."}
+          </p>
+        </div>
+
+        {!error && !isComplete && (
+          <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4">
+            <p className="text-xs font-bold text-primary uppercase tracking-widest">
+              Aguarde alguns minutos
+            </p>
+            <p className="text-[10px] text-primary/60 mt-1">
+              A automação está sendo executada em segundo plano.
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4">
+            <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest">Detalhe do Erro</p>
+            <p className="text-[10px] text-red-400/80 mt-1 truncate">{error}</p>
+          </div>
+        )}
+
+        <button
+          onClick={onClose}
+          className={clsx(
+            "w-full py-3 rounded-xl text-xs font-bold transition-all",
+            isComplete 
+              ? "bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20" 
+              : "bg-white/5 border border-white/10 text-white/40 hover:bg-white/10 hover:text-white"
+          )}
+        >
+          {isComplete ? "Concluído" : "Fechar Janela"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function WeeklyPlanModal({ open, onClose, planoAcao }) {
+  const steps = parseActionPlan(planoAcao);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(planoAcao);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-card border border-white/10 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in scale-in duration-300">
+        <div className="sticky top-0 bg-card/95 backdrop-blur border-b border-white/5 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <Calendar size={20} className="text-emerald-400" />
+            Plano da Semana
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-white/5 rounded-lg transition-colors text-white/60 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          <div className="space-y-4">
+            {steps.length > 0 ? (
+              steps.map((step, idx) => (
+                <div key={idx} className="flex gap-4 items-start group">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-500/20 border-2 border-emerald-500/30 flex items-center justify-center text-sm font-bold text-emerald-400 group-hover:bg-emerald-500/30 transition-colors">
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <p className="text-sm text-white/90 leading-relaxed">{step}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-white/70 whitespace-pre-line">{planoAcao}</p>
+            )}
+          </div>
+
+          <div className="pt-4 border-t border-white/5 flex gap-2">
+            <button
+              onClick={handleCopy}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary/80 text-white font-bold transition-colors"
+            >
+              {copied ? (
+                <>
+                  <Check size={16} />
+                  Copiado!
+                </>
+              ) : (
+                <>
+                  <Copy size={16} />
+                  Copiar Texto Completo
+                </>
+              )}
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-white/70 hover:text-white font-bold transition-colors"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // BLOCO 1: KPIs INTELIGENTES
@@ -563,86 +715,6 @@ function ObjecaoCard({ objecao, index, maxFrequencia, selectedCloser, closersObj
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// BLOCO 6: PLANO DE AÇÃO SEMANAL
-// ═══════════════════════════════════════════════════════════════════
-
-function WeeklyPlanModal({ open, onClose, planoAcao }) {
-  const steps = parseActionPlan(planoAcao);
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(planoAcao);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-card border border-white/10 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in scale-in duration-300">
-        <div className="sticky top-0 bg-card/95 backdrop-blur border-b border-white/5 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Calendar size={20} className="text-emerald-400" />
-            Plano da Semana
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/5 rounded-lg transition-colors text-white/60 hover:text-white"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="p-6 space-y-6">
-          <div className="space-y-4">
-            {steps.length > 0 ? (
-              steps.map((step, idx) => (
-                <div key={idx} className="flex gap-4 items-start group">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-500/20 border-2 border-emerald-500/30 flex items-center justify-center text-sm font-bold text-emerald-400 group-hover:bg-emerald-500/30 transition-colors">
-                    {idx + 1}
-                  </div>
-                  <div className="flex-1 pt-1">
-                    <p className="text-sm text-white/90 leading-relaxed">{step}</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-white/70 whitespace-pre-line">{planoAcao}</p>
-            )}
-          </div>
-
-          <div className="pt-4 border-t border-white/5 flex gap-2">
-            <button
-              onClick={handleCopy}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary/80 text-white font-bold transition-colors"
-            >
-              {copied ? (
-                <>
-                  <Check size={16} />
-                  Copiado!
-                </>
-              ) : (
-                <>
-                  <Copy size={16} />
-                  Copiar Texto Completo
-                </>
-              )}
-            </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-white/70 hover:text-white font-bold transition-colors"
-            >
-              Fechar
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
 // MAIN PAGE COMPONENT
 // ═══════════════════════════════════════════════════════════════════
 
@@ -652,6 +724,8 @@ export default function RelatoriosPage() {
   const [selectedCloser, setSelectedCloser] = useState("Todos");
   const [expandedCloser, setExpandedCloser] = useState(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncStatus, setSyncStatus] = useState({ complete: false, error: null });
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState(null);
   const [selectedReportIndex, setSelectedReportIndex] = useState(null);
@@ -687,20 +761,15 @@ export default function RelatoriosPage() {
   // ─────────────────────────────────────────────────────────────
 
   const reportRows = useMemo(() => {
-    // We look for rows that have the 'ranking' column populated (indicating an IA summary row)
     const rows = data
       .map((row, index) => ({ ...row, originalIndex: index }))
       .filter(row => {
-        // Support both old 'ranking' and new 'ranking_closers' columns
         const rankingValue = (row.ranking_closers || row.ranking || "").toString().trim();
         return rankingValue && (rankingValue.startsWith('[') || rankingValue.startsWith('{'));
       });
-    
-    // Sort by latest first (highest index)
     return [...rows].reverse();
   }, [data]);
 
-  // Default to the first (latest) report row
   useEffect(() => {
     if (reportRows.length > 0 && selectedReportIndex === null) {
       setSelectedReportIndex(reportRows[0].originalIndex);
@@ -738,9 +807,10 @@ export default function RelatoriosPage() {
   const handleSendToWebhook = async () => {
     if (sending) return;
     setSending(true);
+    setShowSyncModal(true);
+    setSyncStatus({ complete: false, error: null });
     
     try {
-      // 1. Fresh fetch to ensure we have the absolute last row
       const res = await fetch(`/api/sheets?url=` + encodeURIComponent(SHEET_URL));
       const json = await res.json();
       
@@ -748,11 +818,9 @@ export default function RelatoriosPage() {
         throw new Error("Não foi possível carregar os dados para envio.");
       }
 
-      // 2. Extract the absolute last row
       const lastRow = json.data[json.data.length - 1];
-      
-      // 3. Send to N8N Webhook
       const webhookUrl = "https://n8n.aegmedia.com.br/webhook/d34fb06b-04e0-4c83-a95b-c459d8bc8ed7";
+      
       const webhookRes = await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -765,9 +833,11 @@ export default function RelatoriosPage() {
 
       if (!webhookRes.ok) throw new Error("Erro na resposta do Webhook");
       
-      showToast("Relatório semanal enviado com sucesso para o N8N!");
+      setSyncStatus({ complete: true, error: null });
+      showToast("Relatório semanal enviado com sucesso!");
     } catch (error) {
       console.error("Erro ao enviar webhook:", error);
+      setSyncStatus({ complete: false, error: error.message });
       showToast(error.message || "Erro ao conectar com o servidor.", "error");
     } finally {
       setSending(false);
@@ -780,48 +850,29 @@ export default function RelatoriosPage() {
 
   const latestAnalysis = useMemo(() => {
     if (reportRows.length === 0) return null;
-    
-    // Use the selected index or fallback to the latest discovered report
     const row = selectedReportIndex !== null ? data[selectedReportIndex] : reportRows[0];
     if (!row) return null;
     
-    // Debug: Log available columns
-    if (Object.keys(row).length > 0) {
-      console.log("Available columns:", Object.keys(row));
-    }
-
-    // Parse JSON fields with proper handling of encoding issues and support for new column names
     const ranking = parseJSONSafely(row["ranking_closers"] || row["ranking"]) || [];
     const estrategia = parseJSONSafely(row["decisoes_estrategicas"] || row["estrategia"]) || [];
     const dores = parseJSONSafely(row["principais_dores"] || row["Dores"]) || [];
-    
-    // Handle encoding issues with "Objeções" column
     let objecoes = parseJSONSafely(row["principais_objecoes"] || row["Objeções"]) || [];
-    if (!objecoes || objecoes.length === 0) {
-      objecoes = parseJSONSafely(row["ObjeÃ§Ãµes"]) || [];
-    }
+    if (!objecoes || objecoes.length === 0) objecoes = parseJSONSafely(row["ObjeÃ§Ãµes"]) || [];
 
-    // Filter out invalid closers and respect the whitelist
     const whitelist = ["HENRIQUE", "BRUNO BORGES", "CARLOS SILVA", "GUSTAVO EMANUEL"];
     const filteredIndices = [];
-    
     const rankingArr = Array.isArray(ranking) ? ranking : Object.values(ranking);
     rankingArr.forEach((item, idx) => {
       const name = (item.nome || item.name || item.closer_nome || "").toString().toUpperCase().trim();
-      const isWhitelisted = whitelist.some(w => name === w || name.includes(w));
-      
-      if (name && isWhitelisted) {
-        filteredIndices.push(idx);
-      }
+      if (name && whitelist.some(w => name === w || name.includes(w))) filteredIndices.push(idx);
     });
 
     const finalRanking = filteredIndices.map(idx => rankingArr[idx]);
     const finalDores = filteredIndices.map(idx => (Array.isArray(dores) ? dores[idx] : Object.values(dores)[idx]) || []);
     const finalObjecoes = filteredIndices.map(idx => (Array.isArray(objecoes) ? objecoes[idx] : Object.values(objecoes)[idx]) || []);
 
-    const normalized = {
+    return {
       ...row,
-      // Decode UTF-8 fields that might have encoding issues
       "Gargalo principal": decodeUTF8(row["gargalo_principal_etapa"] || row["Gargalo principal"] || "—"),
       "Gargalo analise": decodeUTF8(row["gargalo_analise"] || row["Gargalo analise"] || ""),
       "Causa principal de perda": decodeUTF8(row["causa_perda_principal"] || row["Causa principal de perda"] || ""),
@@ -837,17 +888,10 @@ export default function RelatoriosPage() {
       dores: finalDores,
       objecoes: finalObjecoes
     };
-
-    return normalized;
   }, [data, selectedReportIndex, reportRows]);
-
-  // ─────────────────────────────────────────────────────────────
-  // ACTIVE METRICS (FILTERED BY CLOSER)
-  // ─────────────────────────────────────────────────────────────
 
   const activeMetrics = useMemo(() => {
     if (!latestAnalysis) return null;
-    
     if (selectedCloser === "Todos") {
       return {
         gargaloPrincipal: latestAnalysis["Gargalo principal"],
@@ -864,39 +908,15 @@ export default function RelatoriosPage() {
         objecoes: latestAnalysis.objecoes || []
       };
     }
-
-    // Find specific closer data
-    const closerData = latestAnalysis.ranking.find(c => 
-      (c.nome || c.name || c.closer_nome) === selectedCloser
-    );
-
-    if (!closerData) {
-      // Fallback if closer not found in ranking
-      return {
-        gargaloPrincipal: "—",
-        gargaloAnalise: "Dados individuais não encontrados para este closer.",
-        causaRaiz: "—",
-        reprovacaoPercentual: 0,
-        restricaoFinanceira: 0,
-        funnelTotal: 100,
-        funnelCTA: 0,
-        funnelConversao: 0,
-        planoAcaoSemanal: "",
-        planoAcao48h: "",
-        dores: [],
-        objecoes: []
-      };
-    }
-
-    // Extract funnel individual
+    const closerData = latestAnalysis.ranking.find(c => (c.nome || c.name || c.closer_nome) === selectedCloser);
+    if (!closerData) return { gargaloPrincipal: "—", funnelTotal: 100, dores: [], objecoes: [] };
     const fi = closerData.funil_individual || {};
-    
     return {
       gargaloPrincipal: closerData.principal_dor_enfrentada || "—",
       gargaloAnalise: closerData.padrao_identificado || "Nenhum padrão identificado.",
       causaRaiz: closerData.principal_objecao_enfrentada || "Nenhuma objeção principal identificada.",
       reprovacaoPercentual: 100 - (Number(fi.chegaram_ao_cta_percentual) || 0),
-      restricaoFinanceira: 0, // Individual restriction not usually tracked in this JSON
+      restricaoFinanceira: 0,
       funnelTotal: Number(fi.oportunidades_totais_percentual) || 100,
       funnelCTA: Number(fi.chegaram_ao_cta_percentual) || 0,
       funnelConversao: Number(fi.converteram_percentual) || 0,
@@ -907,51 +927,31 @@ export default function RelatoriosPage() {
     };
   }, [latestAnalysis, selectedCloser]);
 
-  // Extract closers list
   const closersList = useMemo(() => {
     if (!latestAnalysis?.ranking) return ["Todos"];
     const names = latestAnalysis.ranking.map(item => item.nome || item.name || item.closer_nome);
     return ["Todos", ...names.filter(Boolean)];
   }, [latestAnalysis]);
 
-  // Get ranked closers sorted by note and correlate with strategy
   const rankedClosers = useMemo(() => {
     if (!latestAnalysis?.ranking) return [];
-    
-    // Build strategy map by closer name
     const strategyMap = {};
     if (latestAnalysis?.estrategia) {
       latestAnalysis.estrategia.forEach((item) => {
         const closerName = item.closer || item.name;
-        if (closerName) {
-          strategyMap[closerName] = {
-            decisao: item.decisao || item.decision,
-            justificativa: item.justificativa || item.justification
-          };
-        }
+        if (closerName) strategyMap[closerName] = { decisao: item.decisao || item.decision };
       });
     }
-
-    // Merge ranking with strategy
-    const closersWithStrategy = latestAnalysis.ranking.map(closer => ({
+    return latestAnalysis.ranking.map(closer => ({
       ...closer,
-      decisao: strategyMap[closer.nome]?.decisao || "MANTER",
-      justificativa: strategyMap[closer.nome]?.justificativa || ""
-    }));
-
-    return [...closersWithStrategy]
-      .sort((a, b) => (Number(b.nota_media) || 0) - (Number(a.nota_media) || 0));
+      decisao: strategyMap[closer.nome]?.decisao || "MANTER"
+    })).sort((a, b) => (Number(b.nota_media) || 0) - (Number(a.nota_media) || 0));
   }, [latestAnalysis]);
 
-  // Map closers to their dores and objecoes
   const closersDores = useMemo(() => {
     const map = {};
     if (latestAnalysis?.ranking && latestAnalysis?.dores) {
-      latestAnalysis.ranking.forEach((closer, idx) => {
-        if (latestAnalysis.dores[idx]) {
-          map[closer.nome] = latestAnalysis.dores[idx];
-        }
-      });
+      latestAnalysis.ranking.forEach((closer, idx) => { if (latestAnalysis.dores[idx]) map[closer.nome] = latestAnalysis.dores[idx]; });
     }
     return map;
   }, [latestAnalysis]);
@@ -959,53 +959,23 @@ export default function RelatoriosPage() {
   const closersObjecoes = useMemo(() => {
     const map = {};
     if (latestAnalysis?.ranking && latestAnalysis?.objecoes) {
-      latestAnalysis.ranking.forEach((closer, idx) => {
-        if (latestAnalysis.objecoes[idx]) {
-          map[closer.nome] = latestAnalysis.objecoes[idx];
-        }
-      });
+      latestAnalysis.ranking.forEach((closer, idx) => { if (latestAnalysis.objecoes[idx]) map[closer.nome] = latestAnalysis.objecoes[idx]; });
     }
     return map;
   }, [latestAnalysis]);
-
-  // Count impacted closers by gargalo
-  const impactedClosersCount = useMemo(() => {
-    return latestAnalysis?.ranking?.length || 0;
-  }, [latestAnalysis]);
-
-  // ─────────────────────────────────────────────────────────────
-  // LOADING STATE
-  // ─────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
       <DashboardContent title="Relatórios Semanais">
         <div className="flex flex-col items-center justify-center p-20 text-white/30 space-y-4">
-          <Activity className="animate-spin" size={32} />
-          <div className="text-sm font-medium">Carregando dados do Google Sheets...</div>
-          <div className="text-xs text-white/20">
-            Puxando de: {SHEET_URL.split('/d/')[1]?.split('/')[0]}
-          </div>
+          <Loader2 className="animate-spin" size={32} />
+          <div className="text-sm font-medium">Carregando dados...</div>
         </div>
       </DashboardContent>
     );
   }
 
-  if (!latestAnalysis) {
-    return (
-      <DashboardContent title="Relatórios Semanais">
-        <div className="p-20 text-center space-y-4">
-          <div className="text-white/30">Sem dados encontrados.</div>
-          <div className="text-xs text-white/20">
-            Verifique se o Google Sheets está configurado corretamente em:
-          </div>
-          <code className="block text-[10px] text-white/40 bg-white/5 p-2 rounded mt-2 break-all">
-            {SHEET_URL}
-          </code>
-        </div>
-      </DashboardContent>
-    );
-  }
+  if (!latestAnalysis) return <DashboardContent title="Relatórios Semanais"><div className="p-20 text-center text-white/30">Sem dados.</div></DashboardContent>;
 
   const reprovacaoPercentual = Number(activeMetrics?.reprovacaoPercentual || 0);
   const severityKPI = getSeverityLabel(reprovacaoPercentual);
@@ -1013,366 +983,91 @@ export default function RelatoriosPage() {
   return (
     <DashboardContent title="Relatórios Semanais">
       <div className="space-y-8 pl-8 pr-10 pt-4 pb-12">
-        
-        {/* ═══════════════════════════════════════════════════════ */}
-        {/* FILTRO DE CLOSER */}
-        {/* ═══════════════════════════════════════════════════════ */}
-
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4 bg-card/30 backdrop-blur-xl border border-white/5 rounded-2xl p-2 px-4 shadow-xl">
             <div className="flex items-center gap-2 text-white/40 border-r border-white/10 pr-4 mr-2">
               <User size={16} />
               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Squad</span>
             </div>
-            <div 
-              ref={scrollRef}
-              onMouseDown={startDragging}
-              onMouseLeave={stopDragging}
-              onMouseUp={stopDragging}
-              onMouseMove={move}
-              className={clsx(
-                "flex gap-2 overflow-x-auto pb-1 no-scrollbar max-w-[400px] cursor-grab active:cursor-grabbing select-none",
-                isDragging && "cursor-grabbing"
-              )}
-            >
+            <div ref={scrollRef} onMouseDown={startDragging} onMouseLeave={stopDragging} onMouseUp={stopDragging} onMouseMove={move} className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-w-[400px] cursor-grab active:cursor-grabbing select-none">
               {closersList.map(closer => (
-                <button
-                  key={closer}
-                  onClick={() => !isDragging && setSelectedCloser(closer)}
-                  className={clsx(
-                    "px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-300 border capitalize flex-shrink-0",
-                    selectedCloser === closer 
-                      ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" 
-                      : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 text-white/60"
-                  )}
-                >
+                <button key={closer} onClick={() => !isDragging && setSelectedCloser(closer)} className={clsx("px-4 py-1.5 rounded-xl text-xs font-bold transition-all border capitalize flex-shrink-0", selectedCloser === closer ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 text-white/60")}>
                   {String(closer).replaceAll("_", " ")}
                 </button>
               ))}
             </div>
           </div>
-
           <div className="flex items-center gap-3">
-             {/* Report History Selector */}
-             {reportRows.length > 0 && (
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                    <Calendar size={14} className="text-primary" />
-                  </div>
-                  <select 
-                    value={selectedReportIndex || reportRows[0].originalIndex}
-                    onChange={(e) => setSelectedReportIndex(Number(e.target.value))}
-                    className="appearance-none bg-primary/10 border border-primary/30 rounded-2xl pl-10 pr-10 py-3 text-xs font-black text-white uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer hover:bg-primary/20"
-                  >
-                    {reportRows.map((report, idx) => (
-                      <option key={report.originalIndex} value={report.originalIndex} className="bg-[#0f172a]">
-                        Report #{reportRows.length - idx} — {(report["Data"] || report["_timestamp"] || "Data N/A").split('T')[0]}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-primary/50">
-                    <ChevronDown size={14} />
-                  </div>
-                </div>
-             )}
-
-            <button
-              onClick={handleSendToWebhook}
-              disabled={sending}
-              className={clsx(
-                "flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 border shadow-lg shadow-emerald-500/10",
-                sending 
-                  ? "bg-white/5 text-white/20 border-white/5 cursor-not-allowed opacity-50" 
-                  : "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500"
-              )}
-            >
-              <Zap size={14} />
-              {sending ? "Enviando..." : "Sincronizar N8N"}
+            {reportRows.length > 0 && (
+              <div className="relative group">
+                <select value={selectedReportIndex || reportRows[0].originalIndex} onChange={(e) => setSelectedReportIndex(Number(e.target.value))} className="appearance-none bg-primary/10 border border-primary/30 rounded-2xl pl-10 pr-10 py-3 text-xs font-black text-white uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer hover:bg-primary/20">
+                  {reportRows.map((report, idx) => <option key={report.originalIndex} value={report.originalIndex} className="bg-[#0f172a]">Report #{reportRows.length - idx} — {(report["Data"] || report["_timestamp"] || "N/A").split('T')[0]}</option>)}
+                </select>
+                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none"><Calendar size={14} className="text-primary" /></div>
+                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-primary/50"><ChevronDown size={14} /></div>
+              </div>
+            )}
+            <button onClick={handleSendToWebhook} disabled={sending} className={clsx("flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border shadow-lg shadow-emerald-500/10", sending ? "bg-white/5 text-white/20 border-white/5 cursor-not-allowed opacity-50" : "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500")}>
+              <Zap size={14} /> {sending ? "Enviando..." : "Sincronizar N8N"}
             </button>
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════════════════════ */}
-        {/* BLOCO 1: KPIs INTELIGENTES */}
-        {/* ═══════════════════════════════════════════════════════ */}
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <KPISCard 
-            icon={<AlertTriangle className="text-red-400" size={20} />} 
-            label="Gargalo Principal" 
-            value={activeMetrics?.gargaloPrincipal || "—"}
-            subValue="Crítico"
-            closerCount={impactedClosersCount}
-          />
-          <KPISCard 
-            icon={<Gauge className={clsx("size-5", severityKPI.color)} size={20} />}
-            label="Reprovação (%)" 
-            value={`${reprovacaoPercentual.toFixed(0)}%`}
-            subValue="Taxa de perda"
-            severity={severityKPI}
-          />
-          <KPISCard 
-            icon={<TrendingDown className="text-purple-400" size={20} />} 
-            label="Restr. Financeira" 
-            value={activeMetrics?.restricaoFinanceira || "0"}
-            subValue="Impactos"
-          />
-          <KPISCard 
-            icon={<Lightbulb className="text-emerald-400" size={20} />} 
-            label="Plano de Ação" 
-            value={selectedCloser === "Todos" ? "Em Andamento" : "Individual"}
-            subValue="Status"
-          />
+          <KPISCard icon={<AlertTriangle className="text-red-400" size={20} />} label="Gargalo Principal" value={activeMetrics?.gargaloPrincipal || "—"} subValue="Crítico" closerCount={latestAnalysis?.ranking?.length || 0} />
+          <KPISCard icon={<Gauge className={clsx("size-5", severityKPI.color)} size={20} />} label="Reprovação (%)" value={`${reprovacaoPercentual.toFixed(0)}%`} subValue="Taxa de perda" severity={severityKPI} />
+          <KPISCard icon={<TrendingDown className="text-purple-400" size={20} />} label="Restr. Financeira" value={activeMetrics?.restricaoFinanceira || "0"} subValue="Impactos" />
+          <KPISCard icon={<Lightbulb className="text-emerald-400" size={20} />} label="Plano de Ação" value={selectedCloser === "Todos" ? "Em Andamento" : "Individual"} subValue="Status" />
         </div>
-
-        {/* ═══════════════════════════════════════════════════════ */}
-        {/* BLOCO 2: ANÁLISE DE GARGALO COM FUNIL */}
-        {/* ═══════════════════════════════════════════════════════ */}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2 space-y-6">
-            {/* Análise Textual */}
             <div className="bg-card/30 backdrop-blur-xl rounded-2xl border border-white/5 overflow-hidden">
-              <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center gap-2">
-                <Activity size={18} className="text-blue-400" />
-                <h3 className="font-bold text-sm uppercase tracking-wider text-white">Análise de Gargalo</h3>
-              </div>
-              <div className="p-6">
-                <p className="text-white/80 leading-relaxed text-sm">
-                  {activeMetrics?.gargaloAnalise || "Análise indisponível"}
-                </p>
-              </div>
+              <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center gap-2"><Activity size={18} className="text-blue-400" /><h3 className="font-bold text-sm uppercase tracking-wider text-white">Análise de Gargalo</h3></div>
+              <div className="p-6"><p className="text-white/80 leading-relaxed text-sm">{activeMetrics?.gargaloAnalise || "Análise indisponível"}</p></div>
             </div>
-
-            {/* Causa Raiz */}
-            <div className={clsx(
-              "bg-card/30 backdrop-blur-xl rounded-2xl border overflow-hidden transition-all duration-300",
-              reprovacaoPercentual > 50 ? "border-red-500/30 bg-red-500/5" : "border-white/5"
-            )}>
-              <div className={clsx(
-                "px-6 py-4 border-b bg-white/5 flex items-center gap-2",
-                reprovacaoPercentual > 50 ? "border-red-500/20" : "border-white/5"
-              )}>
-                <AlertTriangle size={18} className={clsx(reprovacaoPercentual > 50 ? "text-red-400" : "text-white/40")} />
-                <h3 className="font-bold text-sm uppercase tracking-wider text-white">Causa Raiz</h3>
-                {reprovacaoPercentual > 50 && (
-                  <span className="ml-auto px-2 py-0.5 rounded bg-red-500/20 text-red-400 text-[10px] font-bold border border-red-500/30">
-                    Crítica
-                  </span>
-                )}
-              </div>
-              <div className="p-6">
-                <p className="text-white/80 leading-relaxed text-sm">
-                  {activeMetrics?.causaRaiz || "Causa não identificada"}
-                </p>
-              </div>
+            <div className={clsx("bg-card/30 backdrop-blur-xl rounded-2xl border overflow-hidden transition-all duration-300", reprovacaoPercentual > 50 ? "border-red-500/30 bg-red-500/5" : "border-white/5")}>
+              <div className={clsx("px-6 py-4 border-b bg-white/5 flex items-center gap-2", reprovacaoPercentual > 50 ? "border-red-500/20" : "border-white/5")}><AlertTriangle size={18} className={clsx(reprovacaoPercentual > 50 ? "text-red-400" : "text-white/40")} /><h3 className="font-bold text-sm uppercase tracking-wider text-white">Causa Raiz</h3></div>
+              <div className="p-6"><p className="text-white/80 leading-relaxed text-sm">{activeMetrics?.causaRaiz || "Causa não identificada"}</p></div>
             </div>
-
-            {/* Funil Visual */}
             <div className="bg-card/30 backdrop-blur-xl rounded-2xl border border-white/5 overflow-hidden">
-              <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center gap-2">
-                <Zap size={18} className="text-amber-400" />
-                <h3 className="font-bold text-sm uppercase tracking-wider text-white">Funil de Conversão</h3>
-              </div>
-              <div className="p-6">
-                <FunnelVisualization 
-                  funnelTotal={activeMetrics?.funnelTotal} 
-                  funnelCTA={activeMetrics?.funnelCTA}
-                  funnelConversao={activeMetrics?.funnelConversao}
-                />
-              </div>
+              <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center gap-2"><Zap size={18} className="text-amber-400" /><h3 className="font-bold text-sm uppercase tracking-wider text-white">Funil de Conversão</h3></div>
+              <div className="p-6"><FunnelVisualization funnelTotal={activeMetrics?.funnelTotal} funnelCTA={activeMetrics?.funnelCTA} funnelConversao={activeMetrics?.funnelConversao} /></div>
             </div>
-
-            {/* Plano de Ação Semanal / Individual */}
             {activeMetrics?.planoAcaoSemanal && (
               <div className="bg-gradient-to-r from-purple-500/10 via-purple-500/5 to-indigo-500/10 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
-                <div className="px-6 py-4 border-b border-purple-500/20 bg-purple-500/5 flex items-center gap-2">
-                  <Calendar size={18} className="text-purple-400" />
-                  <h3 className="font-bold text-sm uppercase tracking-wider text-white">
-                    {selectedCloser === "Todos" ? "Plano Semanal (Detalhado)" : `Plano Individual: ${selectedCloser}`}
-                  </h3>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-3">
-                    {parseActionPlan(activeMetrics?.planoAcaoSemanal || "").map((step, idx) => (
-                      <div key={idx} className="flex gap-3 items-start">
-                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-xs font-bold text-purple-400 mt-1">
-                          {idx + 1}
-                        </div>
-                        <p className="text-sm text-white/80 leading-relaxed flex-1">{step}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <div className="px-6 py-4 border-b border-purple-500/20 bg-purple-500/5 flex items-center gap-2"><Calendar size={18} className="text-purple-400" /><h3 className="font-bold text-sm uppercase tracking-wider text-white">{selectedCloser === "Todos" ? "Plano Semanal" : `Plano Individual: ${selectedCloser}`}</h3></div>
+                <div className="p-6"><div className="space-y-3">{parseActionPlan(activeMetrics?.planoAcaoSemanal || "").map((step, idx) => (<div key={idx} className="flex gap-3 items-start"><div className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-xs font-bold text-purple-400 mt-1">{idx + 1}</div><p className="text-sm text-white/80 leading-relaxed flex-1">{step}</p></div>))}</div></div>
               </div>
             )}
           </div>
-
-          {/* ────────────────────────────── */}
-          {/* BLOCO 3: RANKING DE CLOSERS */}
-          {/* ────────────────────────────── */}
-
           <div className="space-y-6">
             <div className="bg-card/30 backdrop-blur-xl rounded-2xl border border-white/5 overflow-hidden">
-              <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center gap-2">
-                <Award size={18} className="text-amber-400" />
-                <h3 className="font-bold text-sm uppercase tracking-wider text-white">Ranking Closers</h3>
-              </div>
-              <div className="p-4 space-y-3 max-h-[600px] overflow-y-auto">
-                {rankedClosers.map((closer) => (
-                  <CloserCard
-                    key={closer.nome}
-                    closer={closer}
-                    expanded={expandedCloser === closer.nome}
-                    onToggle={() => setExpandedCloser(expandedCloser === closer.nome ? null : closer.nome)}
-                    filteredIn={selectedCloser === "Todos" || selectedCloser === closer.nome}
-                  />
-                ))}
-              </div>
+              <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center gap-2"><Award size={18} className="text-amber-400" /><h3 className="font-bold text-sm uppercase tracking-wider text-white">Ranking Closers</h3></div>
+              <div className="p-4 space-y-3 max-h-[600px] overflow-y-auto">{rankedClosers.map((closer) => (<CloserCard key={closer.nome} closer={closer} expanded={expandedCloser === closer.nome} onToggle={() => setExpandedCloser(expandedCloser === closer.nome ? null : closer.nome)} filteredIn={selectedCloser === "Todos" || selectedCloser === closer.nome} />))}</div>
             </div>
           </div>
         </div>
-
-        {/* ═══════════════════════════════════════════════════════ */}
-        {/* BLOCO 4: DORES DO CLIENTE */}
-        {/* ═══════════════════════════════════════════════════════ */}
 
         <div className="bg-card/30 backdrop-blur-xl rounded-2xl border border-white/5 overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center gap-2">
-            <Target size={18} className="text-blue-400" />
-            <h3 className="font-bold text-sm uppercase tracking-wider text-white">Dores do Cliente</h3>
-          </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {activeMetrics?.dores && activeMetrics.dores.length > 0 ? (
-              activeMetrics.dores.map((dor, idx) => (
-                <DorCard 
-                  key={idx}
-                  dor={dor}
-                  index={idx}
-                  maxFrequencia={Math.max(...activeMetrics.dores.map(d => Number(d.frequencia_percentual) || 0))}
-                  selectedCloser={selectedCloser}
-                  closersDores={closersDores}
-                />
-              ))
-            ) : (
-              <div className="col-span-2 text-center py-8 text-white/30 text-sm">
-                Sem dados de dores disponíveis
-              </div>
-            )}
-          </div>
+          <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center gap-2"><Target size={18} className="text-blue-400" /><h3 className="font-bold text-sm uppercase tracking-wider text-white">Dores do Cliente</h3></div>
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">{activeMetrics?.dores?.map((dor, idx) => (<DorCard key={idx} dor={dor} index={idx} maxFrequencia={100} selectedCloser={selectedCloser} closersDores={closersDores} />))}</div>
         </div>
-
-        {/* ═══════════════════════════════════════════════════════ */}
-        {/* BLOCO 5: OBJEÇÕES */}
-        {/* ═══════════════════════════════════════════════════════ */}
 
         <div className="bg-card/30 backdrop-blur-xl rounded-2xl border border-white/5 overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center gap-2">
-            <AlertTriangle size={18} className="text-purple-400" />
-            <h3 className="font-bold text-sm uppercase tracking-wider text-white">Principais Objeções</h3>
-          </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {activeMetrics?.objecoes && activeMetrics.objecoes.length > 0 ? (
-              activeMetrics.objecoes.map((objecao, idx) => (
-                <ObjecaoCard 
-                  key={idx}
-                  objecao={objecao}
-                  index={idx}
-                  maxFrequencia={Math.max(...activeMetrics.objecoes.map(o => Number(o.frequencia_percentual) || 0))}
-                  selectedCloser={selectedCloser}
-                  closersObjecoes={closersObjecoes}
-                />
-              ))
-            ) : (
-              <div className="col-span-2 text-center py-8 text-white/30 text-sm">
-                Sem dados de objeções disponíveis
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ═══════════════════════════════════════════════════════ */}
-        {/* BLOCO 6: PLANO DE AÇÃO SEMANAL */}
-        {/* ═══════════════════════════════════════════════════════ */}
-
-        <div className="bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-teal-500/10 backdrop-blur-xl rounded-2xl border border-emerald-500/20 overflow-hidden">
-          <div className="px-6 py-4 border-b border-emerald-500/20 bg-emerald-500/5 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calendar size={18} className="text-emerald-400" />
-              <h3 className="font-bold text-sm uppercase tracking-wider text-white">Plano da Semana</h3>
-            </div>
-            <button
-              onClick={() => setShowPlanModal(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-colors"
-            >
-              <Download size={14} />
-              Expandir Plano
-            </button>
-          </div>
-          <div className="p-6">
-            <div className="space-y-3">
-              {parseActionPlan(latestAnalysis?.["plano acao"] || "").slice(0, 4).map((step, idx) => (
-                <div key={idx} className="flex gap-3 items-start">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-xs font-bold text-emerald-400 mt-1">
-                    {idx + 1}
-                  </div>
-                  <p className="text-sm text-white/80 leading-relaxed flex-1">{step}</p>
-                </div>
-              ))}
-              {parseActionPlan(latestAnalysis?.["plano acao"] || "").length > 4 && (
-                <button
-                  onClick={() => setShowPlanModal(true)}
-                  className="w-full mt-4 py-2 text-xs font-bold text-emerald-400 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/5 transition-colors"
-                >
-                  Ver {parseActionPlan(latestAnalysis?.["plano acao"] || "").length - 4} etapa(s) restante(s)...
-                </button>
-              )}
-            </div>
-          </div>
+          <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center gap-2"><AlertTriangle size={18} className="text-purple-400" /><h3 className="font-bold text-sm uppercase tracking-wider text-white">Principais Objeções</h3></div>
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">{activeMetrics?.objecoes?.map((objecao, idx) => (<ObjecaoCard key={idx} objecao={objecao} index={idx} maxFrequencia={100} selectedCloser={selectedCloser} closersObjecoes={closersObjecoes} />))}</div>
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* MODAL: PLANO DETALHADO */}
-      {/* ═══════════════════════════════════════════════════════ */}
-
-      <WeeklyPlanModal 
-        open={showPlanModal} 
-        onClose={() => setShowPlanModal(false)}
-        planoAcao={activeMetrics?.planoAcao48h || activeMetrics?.planoAcaoSemanal || ""}
-      />
-
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* TOAST NOTIFICATION */}
-      {/* ═══════════════════════════════════════════════════════ */}
+      <WeeklyPlanModal open={showPlanModal} onClose={() => setShowPlanModal(false)} planoAcao={activeMetrics?.planoAcao48h || activeMetrics?.planoAcaoSemanal || ""} />
+      <SyncProgressModal open={showSyncModal} onClose={() => setShowSyncModal(false)} isComplete={syncStatus.complete} error={syncStatus.error} />
+      
       {toast && (
-        <div 
-          className={clsx(
-            "fixed bottom-8 right-8 z-[9999] flex items-center gap-3 px-6 py-4 rounded-2xl backdrop-blur-2xl border shadow-2xl animate-in slide-in-from-right-10 duration-500",
-            toast.type === 'error' 
-              ? "bg-red-500/20 border-red-500/30 text-white" 
-              : "bg-emerald-500/20 border-emerald-500/30 text-white"
-          )}
-        >
-          {toast.type === 'error' ? (
-            <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center border border-red-500/30">
-              <AlertTriangle className="text-red-400" size={18} />
-            </div>
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
-              <Check className="text-emerald-400" size={18} />
-            </div>
-          )}
-          <div className="flex flex-col">
-            <span className="text-[10px] uppercase font-black tracking-widest opacity-50">Notificação System</span>
-            <span className="text-sm font-bold">{toast.message}</span>
-          </div>
-          <button 
-            onClick={() => setToast(null)}
-            className="ml-4 p-1 hover:bg-white/10 rounded-lg transition-colors"
-          >
-            <X size={16} className="opacity-40 hover:opacity-100" />
-          </button>
+        <div className={clsx("fixed bottom-8 right-8 z-[9999] flex items-center gap-3 px-6 py-4 rounded-2xl backdrop-blur-2xl border shadow-2xl animate-in slide-in-from-right-10 duration-500", toast.type === 'error' ? "bg-red-500/20 border-red-500/30 text-white" : "bg-emerald-500/20 border-emerald-500/30 text-white")}>
+          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center border border-white/10">{toast.type === 'error' ? <AlertTriangle className="text-red-400" size={18} /> : <Check className="text-emerald-400" size={18} />}</div>
+          <div className="flex flex-col"><span className="text-[10px] uppercase font-black tracking-widest opacity-50">Notificação System</span><span className="text-sm font-bold">{toast.message}</span></div>
+          <button onClick={() => setToast(null)} className="ml-4 p-1 hover:bg-white/10 rounded-lg transition-colors"><X size={16} className="opacity-40 hover:opacity-100" /></button>
         </div>
       )}
     </DashboardContent>
