@@ -680,7 +680,7 @@ export default function RelatoriosPage() {
     scrollRef.current.scrollLeft = scrollLeft - walk;
   };
 
-  const SHEET_URL = "https://docs.google.com/spreadsheets/d/1nzSfmHlbs5FPUsLrcaJNQhdHCqEWyP9Lf6yaF-7vFhI/export?format=csv&gid=2092544085";
+  const SHEET_URL = "https://docs.google.com/spreadsheets/d/1nzSfmHlbs5FPUsLrcaJNQhdHCqEWyP9Lf6yaF-7vFhI/export?format=csv&gid=987344015";
 
   // ─────────────────────────────────────────────────────────────
   // REPORT HISTORY DISCOVERY
@@ -691,8 +691,9 @@ export default function RelatoriosPage() {
     const rows = data
       .map((row, index) => ({ ...row, originalIndex: index }))
       .filter(row => {
-        const ranking = (row.ranking || "").toString().trim();
-        return ranking && (ranking.startsWith('[') || ranking.startsWith('{'));
+        // Support both old 'ranking' and new 'ranking_closers' columns
+        const rankingValue = (row.ranking_closers || row.ranking || "").toString().trim();
+        return rankingValue && (rankingValue.startsWith('[') || rankingValue.startsWith('{'));
       });
     
     // Sort by latest first (highest index)
@@ -789,13 +790,13 @@ export default function RelatoriosPage() {
       console.log("Available columns:", Object.keys(row));
     }
 
-    // Parse JSON fields with proper handling of encoding issues
-    const ranking = parseJSONSafely(row["ranking"]) || [];
-    const estrategia = parseJSONSafely(row["estrategia"]) || [];
-    const dores = parseJSONSafely(row["Dores"]) || [];
+    // Parse JSON fields with proper handling of encoding issues and support for new column names
+    const ranking = parseJSONSafely(row["ranking_closers"] || row["ranking"]) || [];
+    const estrategia = parseJSONSafely(row["decisoes_estrategicas"] || row["estrategia"]) || [];
+    const dores = parseJSONSafely(row["principais_dores"] || row["Dores"]) || [];
     
-    // Handle encoding issues with "Objeções" column (may appear as "ObjeÃ§Ãµes" or "Objeções")
-    let objecoes = parseJSONSafely(row["Objeções"]) || [];
+    // Handle encoding issues with "Objeções" column
+    let objecoes = parseJSONSafely(row["principais_objecoes"] || row["Objeções"]) || [];
     if (!objecoes || objecoes.length === 0) {
       objecoes = parseJSONSafely(row["ObjeÃ§Ãµes"]) || [];
     }
@@ -821,38 +822,90 @@ export default function RelatoriosPage() {
     const normalized = {
       ...row,
       // Decode UTF-8 fields that might have encoding issues
-      "Gargalo principal": decodeUTF8(row["Gargalo principal"] || "—"),
-      "Gargalo analise": decodeUTF8(row["Gargalo analise"] || ""),
-      "Causa principal de perda": decodeUTF8(row["Causa principal de perda"] || ""),
-      "Gargalo percentual reprovacao": Number((row["Gargalo percentual reprovacao"] || "0").toString().replace(",", ".")),
-      "Restricao financeira": Number((row["Restricao financeira"] || "0").toString().replace(",", ".")),
-      "Funil Total": Number((row["Funil Total"] || "100").toString().replace(",", ".")),
-      "Funil CTA": Number((row["Funil CTA"] || "55").toString().replace(",", ".")),
-      "Funil Conversao": Number((row["Funil Conversao"] || "5.6").toString().replace(",", ".")),
-      "plano acao": decodeUTF8(row["plano acao"] || ""),
-      "Plano acao semanal": decodeUTF8(row["Plano acao semanal"] || ""),
+      "Gargalo principal": decodeUTF8(row["gargalo_principal_etapa"] || row["Gargalo principal"] || "—"),
+      "Gargalo analise": decodeUTF8(row["gargalo_analise"] || row["Gargalo analise"] || ""),
+      "Causa principal de perda": decodeUTF8(row["causa_perda_principal"] || row["Causa principal de perda"] || ""),
+      "Gargalo percentual reprovacao": Number((row["gargalo_percentual_reprovacao"] || row["Gargalo percentual reprovacao"] || "0").toString().replace(",", ".")),
+      "Restricao financeira": Number((row["restricao_financeira_qtd"] || row["Restricao financeira"] || "0").toString().replace(",", ".")),
+      "Funil Total": Number((row["funil_oportunidades_total"] || row["Funil Total"] || "100").toString().replace(",", ".")),
+      "Funil CTA": Number((row["funil_chegaram_ao_cta"] || row["Funil CTA"] || "55").toString().replace(",", ".")),
+      "Funil Conversao": Number((row["funil_converteram"] || row["Funil Conversao"] || "5.6").toString().replace(",", ".")),
+      "plano acao": decodeUTF8(row["plano_acao_48h"] || row["plano acao"] || ""),
+      "Plano acao semanal": decodeUTF8(row["plano_acao_semanal"] || row["Plano acao semanal"] || ""),
       ranking: finalRanking,
       estrategia: Array.isArray(estrategia) ? estrategia : Object.values(estrategia),
       dores: finalDores,
       objecoes: finalObjecoes
     };
 
-    console.log("Parsed data:", {
-      gargalo: normalized["Gargalo principal"],
-      reprovacao: normalized["Gargalo percentual reprovacao"],
-      funnelTotal: normalized["Funil Total"],
-      funnelCTA: normalized["Funil CTA"],
-      funnelConversao: normalized["Funil Conversao"],
-      rankingCount: normalized.ranking.length,
-      doresCount: normalized.dores.length,
-      objecoesCount: normalized.objecoes.length,
-      estrategiaCount: normalized.estrategia.length,
-      planoAcaoLength: normalized["plano acao"]?.length || 0,
-      planoSemanallength: normalized["Plano acao semanal"]?.length || 0
-    });
-
     return normalized;
-  }, [data]);
+  }, [data, selectedReportIndex, reportRows]);
+
+  // ─────────────────────────────────────────────────────────────
+  // ACTIVE METRICS (FILTERED BY CLOSER)
+  // ─────────────────────────────────────────────────────────────
+
+  const activeMetrics = useMemo(() => {
+    if (!latestAnalysis) return null;
+    
+    if (selectedCloser === "Todos") {
+      return {
+        gargaloPrincipal: latestAnalysis["Gargalo principal"],
+        gargaloAnalise: latestAnalysis["Gargalo analise"],
+        causaRaiz: latestAnalysis["Causa principal de perda"],
+        reprovacaoPercentual: latestAnalysis["Gargalo percentual reprovacao"],
+        restricaoFinanceira: latestAnalysis["Restricao financeira"],
+        funnelTotal: latestAnalysis["Funil Total"],
+        funnelCTA: latestAnalysis["Funil CTA"],
+        funnelConversao: latestAnalysis["Funil Conversao"],
+        planoAcaoSemanal: latestAnalysis["Plano acao semanal"],
+        planoAcao48h: latestAnalysis["plano acao"],
+        dores: latestAnalysis.dores || [],
+        objecoes: latestAnalysis.objecoes || []
+      };
+    }
+
+    // Find specific closer data
+    const closerData = latestAnalysis.ranking.find(c => 
+      (c.nome || c.name || c.closer_nome) === selectedCloser
+    );
+
+    if (!closerData) {
+      // Fallback if closer not found in ranking
+      return {
+        gargaloPrincipal: "—",
+        gargaloAnalise: "Dados individuais não encontrados para este closer.",
+        causaRaiz: "—",
+        reprovacaoPercentual: 0,
+        restricaoFinanceira: 0,
+        funnelTotal: 100,
+        funnelCTA: 0,
+        funnelConversao: 0,
+        planoAcaoSemanal: "",
+        planoAcao48h: "",
+        dores: [],
+        objecoes: []
+      };
+    }
+
+    // Extract funnel individual
+    const fi = closerData.funil_individual || {};
+    
+    return {
+      gargaloPrincipal: closerData.principal_dor_enfrentada || "—",
+      gargaloAnalise: closerData.padrao_identificado || "Nenhum padrão identificado.",
+      causaRaiz: closerData.principal_objecao_enfrentada || "Nenhuma objeção principal identificada.",
+      reprovacaoPercentual: 100 - (Number(fi.chegaram_ao_cta_percentual) || 0),
+      restricaoFinanceira: 0, // Individual restriction not usually tracked in this JSON
+      funnelTotal: Number(fi.oportunidades_totais_percentual) || 100,
+      funnelCTA: Number(fi.chegaram_ao_cta_percentual) || 0,
+      funnelConversao: Number(fi.converteram_percentual) || 0,
+      planoAcaoSemanal: closerData.plano_acao_individual || "",
+      planoAcao48h: closerData.acao_imediata_individual || "",
+      dores: closerData.dores_individuais || [],
+      objecoes: closerData.objecoes_individuais || []
+    };
+  }, [latestAnalysis, selectedCloser]);
 
   // Extract closers list
   const closersList = useMemo(() => {
@@ -954,7 +1007,7 @@ export default function RelatoriosPage() {
     );
   }
 
-  const reprovacaoPercentual = Number(latestAnalysis["Gargalo percentual reprovacao"] || 0);
+  const reprovacaoPercentual = Number(activeMetrics?.reprovacaoPercentual || 0);
   const severityKPI = getSeverityLabel(reprovacaoPercentual);
 
   return (
@@ -1047,7 +1100,7 @@ export default function RelatoriosPage() {
           <KPISCard 
             icon={<AlertTriangle className="text-red-400" size={20} />} 
             label="Gargalo Principal" 
-            value={latestAnalysis?.["Gargalo principal"] || "—"}
+            value={activeMetrics?.gargaloPrincipal || "—"}
             subValue="Crítico"
             closerCount={impactedClosersCount}
           />
@@ -1061,14 +1114,14 @@ export default function RelatoriosPage() {
           <KPISCard 
             icon={<TrendingDown className="text-purple-400" size={20} />} 
             label="Restr. Financeira" 
-            value={latestAnalysis?.["Restricao financeira"] || "0"}
+            value={activeMetrics?.restricaoFinanceira || "0"}
             subValue="Impactos"
           />
           <KPISCard 
             icon={<Lightbulb className="text-emerald-400" size={20} />} 
             label="Plano de Ação" 
-            value="Em Andamento"
-            subValue="Semanal"
+            value={selectedCloser === "Todos" ? "Em Andamento" : "Individual"}
+            subValue="Status"
           />
         </div>
 
@@ -1086,7 +1139,7 @@ export default function RelatoriosPage() {
               </div>
               <div className="p-6">
                 <p className="text-white/80 leading-relaxed text-sm">
-                  {latestAnalysis?.["Gargalo analise"] || "Análise indisponível"}
+                  {activeMetrics?.gargaloAnalise || "Análise indisponível"}
                 </p>
               </div>
             </div>
@@ -1110,7 +1163,7 @@ export default function RelatoriosPage() {
               </div>
               <div className="p-6">
                 <p className="text-white/80 leading-relaxed text-sm">
-                  {latestAnalysis?.["Causa principal de perda"] || "Causa não identificada"}
+                  {activeMetrics?.causaRaiz || "Causa não identificada"}
                 </p>
               </div>
             </div>
@@ -1123,23 +1176,25 @@ export default function RelatoriosPage() {
               </div>
               <div className="p-6">
                 <FunnelVisualization 
-                  funnelTotal={latestAnalysis?.["Funil Total"]} 
-                  funnelCTA={latestAnalysis?.["Funil CTA"]}
-                  funnelConversao={latestAnalysis?.["Funil Conversao"]}
+                  funnelTotal={activeMetrics?.funnelTotal} 
+                  funnelCTA={activeMetrics?.funnelCTA}
+                  funnelConversao={activeMetrics?.funnelConversao}
                 />
               </div>
             </div>
 
-            {/* Plano de Ação Semanal */}
-            {latestAnalysis?.["Plano acao semanal"] && (
+            {/* Plano de Ação Semanal / Individual */}
+            {activeMetrics?.planoAcaoSemanal && (
               <div className="bg-gradient-to-r from-purple-500/10 via-purple-500/5 to-indigo-500/10 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
                 <div className="px-6 py-4 border-b border-purple-500/20 bg-purple-500/5 flex items-center gap-2">
                   <Calendar size={18} className="text-purple-400" />
-                  <h3 className="font-bold text-sm uppercase tracking-wider text-white">Plano Semanal (Detalhado)</h3>
+                  <h3 className="font-bold text-sm uppercase tracking-wider text-white">
+                    {selectedCloser === "Todos" ? "Plano Semanal (Detalhado)" : `Plano Individual: ${selectedCloser}`}
+                  </h3>
                 </div>
                 <div className="p-6">
                   <div className="space-y-3">
-                    {parseActionPlan(latestAnalysis?.["Plano acao semanal"] || "").map((step, idx) => (
+                    {parseActionPlan(activeMetrics?.planoAcaoSemanal || "").map((step, idx) => (
                       <div key={idx} className="flex gap-3 items-start">
                         <div className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-xs font-bold text-purple-400 mt-1">
                           {idx + 1}
@@ -1188,13 +1243,13 @@ export default function RelatoriosPage() {
             <h3 className="font-bold text-sm uppercase tracking-wider text-white">Dores do Cliente</h3>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {latestAnalysis.dores && latestAnalysis.dores.length > 0 ? (
-              latestAnalysis.dores.map((dor, idx) => (
+            {activeMetrics?.dores && activeMetrics.dores.length > 0 ? (
+              activeMetrics.dores.map((dor, idx) => (
                 <DorCard 
                   key={idx}
                   dor={dor}
                   index={idx}
-                  maxFrequencia={Math.max(...latestAnalysis.dores.map(d => Number(d.frequencia_percentual) || 0))}
+                  maxFrequencia={Math.max(...activeMetrics.dores.map(d => Number(d.frequencia_percentual) || 0))}
                   selectedCloser={selectedCloser}
                   closersDores={closersDores}
                 />
@@ -1217,13 +1272,13 @@ export default function RelatoriosPage() {
             <h3 className="font-bold text-sm uppercase tracking-wider text-white">Principais Objeções</h3>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {latestAnalysis.objecoes && latestAnalysis.objecoes.length > 0 ? (
-              latestAnalysis.objecoes.map((objecao, idx) => (
+            {activeMetrics?.objecoes && activeMetrics.objecoes.length > 0 ? (
+              activeMetrics.objecoes.map((objecao, idx) => (
                 <ObjecaoCard 
                   key={idx}
                   objecao={objecao}
                   index={idx}
-                  maxFrequencia={Math.max(...latestAnalysis.objecoes.map(o => Number(o.frequencia_percentual) || 0))}
+                  maxFrequencia={Math.max(...activeMetrics.objecoes.map(o => Number(o.frequencia_percentual) || 0))}
                   selectedCloser={selectedCloser}
                   closersObjecoes={closersObjecoes}
                 />
@@ -1284,7 +1339,7 @@ export default function RelatoriosPage() {
       <WeeklyPlanModal 
         open={showPlanModal} 
         onClose={() => setShowPlanModal(false)}
-        planoAcao={latestAnalysis?.["plano acao"] || ""}
+        planoAcao={activeMetrics?.planoAcao48h || activeMetrics?.planoAcaoSemanal || ""}
       />
 
       {/* ═══════════════════════════════════════════════════════ */}
