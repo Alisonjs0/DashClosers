@@ -47,7 +47,7 @@ export default function AuthGuard({ children }) {
   return (
     <div className="flex min-h-screen relative w-full overflow-hidden bg-[#020617] m-0 p-0">
       <Sidebar />
-      <main className="flex-1 transition-all duration-300 ml-20 md:ml-64 relative z-10 w-full min-w-0 bg-[#020617] p-0 m-0">
+      <main className="flex-1 transition-all duration-300 ml-0 md:ml-64 relative z-10 w-full min-w-0 bg-[#020617] p-0 m-0">
         <div className="w-full h-full p-0 m-0 animate-fade-in flex flex-col">
           {children}
         </div>

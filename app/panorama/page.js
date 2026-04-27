@@ -288,7 +288,7 @@ export default function PanoramaPage() {
       onRefresh={() => fetchData(sheetUrl)}
       title="Panorama Geral de Performance"
     >
-      <div className="pt-8 space-y-6 md:space-y-10 max-w-full pl-8 pr-10">
+      <div className="pt-8 space-y-6 md:space-y-10 max-w-full px-4 md:pl-8 md:pr-10">
         {/* Header Section */}
         <div className="bg-[#0a0f1d]/40 backdrop-blur-3xl p-6 rounded-[2.5rem] border border-white/5 shadow-2xl mb-8">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
@@ -428,12 +428,12 @@ export default function PanoramaPage() {
             {/* Separate Sticky Header Container */}
             <div 
               ref={avgHeaderRef}
-              className="sticky top-0 z-[50] bg-[#0a0f1d] border-b border-white/10 shadow-2xl"
+              className="sticky top-0 z-[50] bg-[#0a0f1d] border-b border-white/10 shadow-2xl overflow-hidden"
             >
               <table className="w-full border-collapse min-w-[1100px]">
                 <thead>
                   <tr className="bg-[#0a0f1d]">
-                    <th className="px-8 py-6 text-left border-b border-white/5 bg-[#0a0f1d] w-[130px] min-w-[130px] max-w-[130px]">
+                    <th className="sticky left-0 z-[60] px-8 py-6 text-left border-b border-white/5 bg-[#0a0f1d] w-[130px] min-w-[130px] max-w-[130px] shadow-[4px_0_15px_-5px_rgba(0,0,0,0.5)]">
                       <span className="text-[10px] uppercase font-black text-slate-500 tracking-[0.2em]">Closer</span>
                     </th>
                     {SCORE_KEYS.map(key => (
@@ -458,7 +458,7 @@ export default function PanoramaPage() {
                 <tbody className="divide-y divide-white/5">
                   {closers.map(closer => (
                     <tr key={closer} className="group hover:bg-white/[0.02] transition-colors">
-                      <td className="px-8 py-6 font-black text-sm text-white uppercase italic tracking-tight bg-[#0a0f1d] group-hover:text-primary transition-colors border-r border-white/5 w-[130px] min-w-[130px] max-w-[130px] truncate">
+                      <td className="sticky left-0 z-[40] px-8 py-6 font-black text-sm text-white uppercase italic tracking-tight bg-[#0a0f1d] group-hover:bg-[#0f172a] group-hover:text-primary transition-colors border-r border-white/5 w-[130px] min-w-[130px] max-w-[130px] truncate shadow-[4px_0_15px_-5px_rgba(0,0,0,0.5)]">
                         {closer}
                       </td>
                       {SCORE_KEYS.map(key => {
@@ -589,12 +589,12 @@ export default function PanoramaPage() {
             {/* Separate Sticky Header Container */}
             <div 
               ref={detHeaderRef}
-              className="sticky top-[108px] z-[50] bg-[#0a0f1d] border-b border-white/10 shadow-2xl"
+              className="sticky top-[108px] z-[50] bg-[#0a0f1d] border-b border-white/10 shadow-2xl overflow-hidden"
             >
               <table className="w-full border-collapse min-w-[1100px]">
                 <thead>
                   <tr className="bg-[#0a0f1d]">
-                    <th className="px-6 py-6 text-center border-b border-white/5 bg-[#0a0f1d] w-[60px] min-w-[60px] max-w-[60px]">
+                    <th className="sticky left-0 z-[60] px-6 py-6 text-center border-b border-white/5 bg-[#0a0f1d] w-[60px] min-w-[60px] max-w-[60px]">
                       <input 
                         type="checkbox" 
                         checked={excludedKeys.size === 0 && filteredData.length > 0}
@@ -603,7 +603,7 @@ export default function PanoramaPage() {
                         title={excludedKeys.size > 0 ? "Restaurar todas" : "Excluir todas"}
                       />
                     </th>
-                    <th className="px-6 py-6 text-left border-b border-white/5 bg-[#0a0f1d] w-[140px] min-w-[140px] max-w-[140px]">
+                    <th className="sticky left-[60px] z-[60] px-6 py-6 text-left border-b border-white/5 bg-[#0a0f1d] w-[140px] min-w-[140px] max-w-[140px] shadow-[4px_0_15px_-5px_rgba(0,0,0,0.5)]">
                       <span className="text-[10px] uppercase font-black text-slate-500 tracking-[0.2em]">Data / Cliente</span>
                     </th>
                     {SCORE_KEYS.map(key => (
@@ -635,7 +635,7 @@ export default function PanoramaPage() {
                       )}
                       onClick={() => toggleRow(row._key)}
                     >
-                      <td className="px-6 py-4 text-center bg-transparent w-[60px] min-w-[60px] max-w-[60px]">
+                      <td className="sticky left-0 z-[40] px-6 py-4 text-center bg-[#0a0f1d] w-[60px] min-w-[60px] max-w-[60px]">
                         <input 
                           type="checkbox" 
                           checked={!excludedKeys.has(row._key)}
@@ -643,7 +643,7 @@ export default function PanoramaPage() {
                           className="w-4 h-4 rounded border-white/20 bg-white/5 text-primary focus:ring-primary/40 focus:ring-offset-0 cursor-pointer"
                         />
                       </td>
-                      <td className="px-6 py-4 bg-transparent border-r border-white/5 w-[140px] min-w-[140px] max-w-[140px]">
+                      <td className="sticky left-[60px] z-[40] px-6 py-4 bg-[#0a0f1d] border-r border-white/5 w-[140px] min-w-[140px] max-w-[140px] shadow-[4px_0_15px_-5px_rgba(0,0,0,0.5)]">
                         <div className="flex flex-col gap-1">
                           <span className="text-[9px] font-black text-primary/70 uppercase tracking-tighter">
                             {row["Data"] ? new Date(parseRowDate(row["Data"])).toLocaleDateString('pt-BR') : "-"}

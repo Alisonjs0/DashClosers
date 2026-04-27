@@ -221,7 +221,7 @@ export default function Home() {
                 lastUpdated={lastUpdated}
                 onRefresh={() => fetchData(sheetUrl)}
             >
-                <div className="w-full space-y-8 py-10 pl-8 pr-10">
+                <div className="w-full space-y-8 py-6 md:py-10 px-4 md:pl-8 md:pr-10">
                     <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-10">
                         <div className="space-y-1">
                             <h1 className="text-4xl font-black impact-title leading-tight">Performance Geral</h1>

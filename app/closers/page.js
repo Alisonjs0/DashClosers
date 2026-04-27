@@ -121,7 +121,7 @@ export default function ClosersPage() {
       onRefresh={() => fetchData(sheetUrl)}
       title="Performance de Closers"
     >
-      <div className="space-y-8 pl-8 pr-10">
+      <div className="space-y-8 py-6 md:py-10 px-4 md:pl-8 md:pr-10">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-10">
           <div className="space-y-1">

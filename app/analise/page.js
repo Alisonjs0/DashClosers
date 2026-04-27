@@ -147,7 +147,7 @@ export default function AnalyticsPage() {
       onRefresh={() => fetchData(sheetUrl)}
       title="Análise de Performance"
     >
-      <div className="space-y-8 pl-8 pr-10">
+      <div className="space-y-8 py-6 md:py-10 px-4 md:pl-8 md:pr-10">
         {/* Analytics Header & Filters */}
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 mb-10 relative z-20">
           <div className="space-y-1">
