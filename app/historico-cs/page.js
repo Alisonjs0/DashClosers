@@ -67,7 +67,10 @@ export default function HistoricoCS() {
         const seen = new Map();
 
         sorted.forEach((row) => {
-            const normalize = (val) => (val || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "").trim();
+            const normalize = (val) => {
+                const clean = (val || "").toString().split(/[\s-]+-|[\s-]\(/)[0].trim();
+                return clean.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "").trim();
+            };
             
             const clientKey = normalize(row["Empresa (Cliente)"]);
             const closerKey = normalize(row["Closer"]);
@@ -94,6 +97,10 @@ export default function HistoricoCS() {
                     if (!baseVal && currentVal) {
                         baseRow[key] = currentVal;
                     } 
+                    // Priorizar status de fechamento
+                    else if (key === "Status" && isClosed(currentVal) && !isClosed(baseVal)) {
+                        baseRow[key] = currentVal;
+                    }
                     // If it's analytical/text content, merge if they are different
                     else if (key.toLowerCase().includes('analise') || key.toLowerCase().includes('observação') || key.toLowerCase().includes('dor') || key.toLowerCase().includes('perfil')) {
                         if (currentVal && baseVal !== currentVal && !baseVal.includes(currentVal)) {

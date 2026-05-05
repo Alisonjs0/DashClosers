@@ -95,14 +95,17 @@ export default function Home() {
         const grouped = [];
         const seen = new Map();
 
-        const normalize = (val) => (val || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "").trim();
+        const normalize = (val) => {
+            const clean = (val || "").toString().split(/[\s-]+-|[\s-]\(/)[0].trim();
+            return clean.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "").trim();
+        };
 
         sorted.forEach((row) => {
             const clientKey = normalize(row["Empresa (Cliente)"]);
             const closerKey = normalize(row["Closer"]);
             const rawDate = (row["Data"] || "").toString().trim();
-            let dateKey = normalize(rawDate);
             const parsed = parseRowDate(rawDate);
+            let dateKey = normalize(rawDate);
             if (parsed) {
                 const d = new Date(parsed);
                 if (!isNaN(d.getTime())) {
@@ -135,6 +138,10 @@ export default function Home() {
                     const existingVal = existingRow[field];
 
                     if (!existingVal && currentVal) {
+                        existingRow[field] = currentVal;
+                    }
+                    // Priorizar status de fechamento durante o agrupamento
+                    else if (field === "Status" && isClosed(currentVal) && !isClosed(existingVal)) {
                         existingRow[field] = currentVal;
                     }
                     else if (field.toLowerCase().includes('analise') || field.toLowerCase().includes('observação') || field.toLowerCase().includes('dor') || field.toLowerCase().includes('perfil')) {

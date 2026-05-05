@@ -37,7 +37,7 @@ export default function PanoramaPage() {
     setModalOpen(true);
   };
 
-  const ALLOWED_CLOSERS = ["CARLOS SILVA", "GUSTAVO EMANUEL", "HENRIQUE", "BRUNO BORGES"];
+  const ALLOWED_CLOSERS = ["CARLOS SILVA", "GUSTAVO EMANUEL", "BRUNO BORGES"];
 
   const closers = useMemo(() => {
     return allClosers.filter(closer => ALLOWED_CLOSERS.includes(closer.toUpperCase().trim()));
@@ -95,7 +95,8 @@ export default function PanoramaPage() {
       // Normalização ultra-agressiva para garantir o agrupamento
       // Removemos acentos, espaços extras e caracteres não-alfanuméricos para a chave
       const normalizeValues = (val) => {
-        return (val || "").toString()
+        const clean = (val || "").toString().split(/[\s-]+-|[\s-]\(/)[0].trim();
+        return clean
           .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos
           .toUpperCase()
           .replace(/[^A-Z0-9]/g, "") // Mantém apenas letras e números
@@ -141,8 +142,25 @@ export default function PanoramaPage() {
             existingRow._scores[k].push(s);
           }
         });
-        // Opcional: Atualizar status se a duplicata tiver um status mais "importante"
-        // Mas por padrão mantemos o da primeira (mais recente)
+
+        // Preencher dados faltantes no registro mais recente e priorizar fechamento
+        Object.keys(row).forEach(field => {
+          const currentVal = row[field];
+          const existingVal = existingRow[field];
+
+          if (!existingVal && currentVal) {
+            existingRow[field] = currentVal;
+          }
+          // Priorizar status de fechamento
+          else if (field === "Status" && isClosed(currentVal) && !isClosed(existingVal)) {
+            existingRow[field] = currentVal;
+          }
+          else if (field.toLowerCase().includes('analise') || field.toLowerCase().includes('observação') || field.toLowerCase().includes('dor') || field.toLowerCase().includes('perfil')) {
+            if (currentVal && existingVal !== currentVal && !existingVal?.toString().includes(currentVal.toString())) {
+                existingRow[field] = `${existingVal}\n\n${currentVal}`;
+            }
+          }
+        });
       }
     });
 
