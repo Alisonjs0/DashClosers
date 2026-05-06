@@ -2,7 +2,7 @@
 
 import { useDashboardContext } from "@/lib/contexts/DashboardContext";
 import DashboardContent from "@/components/DashboardContent";
-import { SCORE_KEYS, parseScore, parseRowDate } from "@/lib/utils";
+import { SCORE_KEYS, parseScore, parseRowDate, isClosed } from "@/lib/utils";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { Target, AlertTriangle, CheckCircle2, TrendingUp, Grid, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { clsx } from "clsx";
