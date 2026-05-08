@@ -160,7 +160,7 @@ export default function DoresPage() {
             .filter(([name, count]) => {
                 const upper = name.toUpperCase().trim();
                 const blacklist = ["NÃO INFORMADO", "NÃO IDENTIFICADO", "NÃO INFORMADA", "DESCONHECIDO", "NI", "NÃO", "N.A", "N/A", "NÃO IDENTIFICADA", "REUNIÃO INTERNA", "REUNIAO INTERNA"];
-                return (selectedCloser === "Todos" || name === selectedCloser) && count > 2 && !blacklist.includes(upper) && !upper.includes("REUNIÃO") && !upper.includes("INTERNA");
+                return (selectedCloser === "Todos" || name === selectedCloser) && count > 0 && !blacklist.includes(upper) && !upper.includes("REUNIÃO") && !upper.includes("INTERNA");
             })
             .map(([name]) => name)
             .sort();

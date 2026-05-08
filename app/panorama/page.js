@@ -192,17 +192,18 @@ export default function PanoramaPage() {
     return finalData;
   }, [data, dateFrom, dateTo, sdrFilter]);
 
-  // 1.5 Global limit for Detailed View (Histórico Geral)
+  // 1.5 Data for Detailed View (Histórico Geral) - Always shows full history
   const globalLimitedData = useMemo(() => {
-    if (lastCallsLimit && lastCallsLimit !== 9999) {
-      return filteredData.slice(0, lastCallsLimit);
-    }
     return filteredData;
-  }, [filteredData, lastCallsLimit]);
+  }, [filteredData]);
 
   const currentReportStats = useMemo(() => {
-    // We calculate stats for the LIMITED data EXCEPT those in excludedKeys
-    const includedRows = globalLimitedData.filter(row => !excludedKeys.has(row._key));
+    // For the stats card above the table, we show the limit IF selected, for comparison
+    const baseData = (lastCallsLimit && lastCallsLimit !== 9999) 
+      ? filteredData.slice(0, lastCallsLimit) 
+      : filteredData;
+      
+    const includedRows = baseData.filter(row => !excludedKeys.has(row._key));
     
     if (includedRows.length === 0) return null;
 
@@ -219,7 +220,7 @@ export default function PanoramaPage() {
       averages: stats,
       hasExclusions: excludedKeys.size > 0
     };
-  }, [globalLimitedData, excludedKeys]);
+  }, [filteredData, lastCallsLimit, excludedKeys]);
 
   const toggleAll = () => {
     if (excludedKeys.size > 0) {
@@ -333,21 +334,23 @@ export default function PanoramaPage() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5 bg-white/5 p-4 rounded-3xl border border-white/5 backdrop-blur-xl shadow-inner">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Analisar Últimas Calls</label>
-              <div className="flex items-center gap-2">
-                <select
-                  value={lastCallsLimit}
-                  onChange={(e) => setLastCallsLimit(Number(e.target.value))}
-                  className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-200 focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer min-w-[120px]"
-                >
-                  {[5, 10, 20, 50, 100].map(num => (
-                    <option key={num} value={num} className="bg-[#0f172a]">{num} Calls</option>
-                  ))}
-                  <option value={9999} className="bg-[#0f172a]">Todas</option>
-                </select>
+            {viewMode === 'average' && (
+              <div className="flex flex-col gap-1.5 bg-white/5 p-4 rounded-3xl border border-white/5 backdrop-blur-xl shadow-inner animate-in fade-in slide-in-from-right-4 duration-500">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Analisar Últimas Calls</label>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={lastCallsLimit}
+                    onChange={(e) => setLastCallsLimit(Number(e.target.value))}
+                    className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-200 focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer min-w-[120px]"
+                  >
+                    {[5, 10, 20, 50, 100].map(num => (
+                      <option key={num} value={num} className="bg-[#0f172a]">{num} Calls</option>
+                    ))}
+                    <option value={9999} className="bg-[#0f172a]">Todas</option>
+                  </select>
+                </div>
               </div>
-            </div>
+            )}
 
             {viewMode === 'detailed' && (
               <div className="flex flex-wrap items-center gap-4 bg-white/5 p-4 rounded-3xl border border-white/5 backdrop-blur-xl animate-fade-in shadow-inner">
@@ -604,11 +607,18 @@ export default function PanoramaPage() {
               </div>
             </div>
             
-            {/* Separate Sticky Header Container */}
+            {/* Combined Table Container with Adaptive Height */}
             <div 
-              ref={detHeaderRef}
-              className="sticky top-[108px] z-[50] bg-[#0a0f1d] border-b border-white/10 shadow-2xl overflow-hidden"
+              className="overflow-auto custom-scrollbar scroll-smooth max-h-[calc(100vh-350px)] border-t border-white/5"
+              style={{ scrollbarGutter: 'stable' }}
+              onScroll={(e) => {
+                // Sync any horizontal scroll if needed, though with combined container it's automatic
+              }}
             >
+              <div 
+                ref={detHeaderRef}
+                className="sticky top-0 z-[50] bg-[#0a0f1d] border-b border-white/10 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.5)] overflow-hidden"
+              >
               <table className="w-full border-collapse min-w-[1100px]">
                 <thead>
                   <tr className="bg-[#0a0f1d]">
@@ -621,7 +631,7 @@ export default function PanoramaPage() {
                         title={excludedKeys.size > 0 ? "Restaurar todas" : "Excluir todas"}
                       />
                     </th>
-                    <th className="sticky left-[60px] z-[60] px-6 py-6 text-left border-b border-white/5 bg-[#0a0f1d] w-[140px] min-w-[140px] max-w-[140px] shadow-[4px_0_15px_-5px_rgba(0,0,0,0.5)]">
+                    <th className="sticky left-[60px] z-[60] px-6 py-6 text-left border-b border-white/5 bg-[#0a0f1d] w-[140px] min-w-[140px] max-w-[140px] shadow-[8px_0_20px_-10px_rgba(0,0,0,0.8)]">
                       <span className="text-[10px] uppercase font-black text-slate-500 tracking-[0.2em]">Data / Cliente</span>
                     </th>
                     {SCORE_KEYS.map(key => (
@@ -636,12 +646,8 @@ export default function PanoramaPage() {
               </table>
             </div>
 
-            {/* Scrollable Body Container */}
-            <div 
-              ref={detBodyRef}
-              onScroll={(e) => syncScroll(e.target, detHeaderRef.current)}
-              className="overflow-x-auto overflow-y-visible custom-scrollbar"
-            >
+              {/* Table Body */}
+              <div ref={detBodyRef}>
               <table className="w-full border-collapse min-w-[1100px]">
                 <tbody className="divide-y divide-white/5">
                   {paginatedRows.map((row, idx) => (
@@ -661,7 +667,7 @@ export default function PanoramaPage() {
                           className="w-4 h-4 rounded border-white/20 bg-white/5 text-primary focus:ring-primary/40 focus:ring-offset-0 cursor-pointer"
                         />
                       </td>
-                      <td className="sticky left-[60px] z-[40] px-6 py-4 bg-[#0a0f1d] border-r border-white/5 w-[140px] min-w-[140px] max-w-[140px] shadow-[4px_0_15px_-5px_rgba(0,0,0,0.5)]">
+                      <td className="sticky left-[60px] z-[40] px-6 py-4 bg-[#0a0f1d] border-r border-white/5 w-[140px] min-w-[140px] max-w-[140px] shadow-[8px_0_20px_-10px_rgba(0,0,0,0.8)]">
                         <div className="flex flex-col gap-1">
                           <span className="text-[9px] font-black text-primary/70 uppercase tracking-tighter">
                             {row["Data"] ? new Date(parseRowDate(row["Data"])).toLocaleDateString('pt-BR') : "-"}
@@ -703,8 +709,9 @@ export default function PanoramaPage() {
               </table>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+    </div>
 
       <CallDetailsModal 
         isOpen={modalOpen} 
