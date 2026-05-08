@@ -116,6 +116,31 @@ export default function AnalyticsPage() {
     return { total, closedCount, conversionRate };
   }, [filteredData]);
 
+  const painCategories = useMemo(() => {
+    const CATEGORIES = [
+        { label: "Financeiro", keywords: ["caixa", "dinheiro", "preço", "valor", "investimento", "parcel", "juros", "financeiro", "orcamento", "caro", "custo", "pagar", "verba"], color: "bg-red-500" },
+        { label: "Tempo", keywords: ["tempo", "agenda", "corrida", "prazo", "hoje", "agora", "demora", "urgente", "implementação", "esperar", "mês que vem", "semana"], color: "bg-amber-500" },
+        { label: "Autoridade", keywords: ["sócio", "sociedade", "esposa", "marido", "ceo", "diretoria", "diretor", "decisor", "falar com", "equipe", "reunião com o", "aprovação"], color: "bg-primary" },
+        { label: "Confiança", keywords: ["confiança", "seguro", "certeza", "garantia", "prova", "resultado", "caso", "saber", "funciona", "medo", "risco", "depoimento"], color: "bg-emerald-500" },
+        { label: "Produto", keywords: ["solução", "fit", "onboarding", "produto", "ferramenta", "funcionamento", "processo", "metodologia", "integra", "api", "funcionalidade", "entregue"], color: "bg-cyan-500" },
+    ];
+
+    const counts = {};
+    filteredData.forEach(item => {
+        const text = (item["Dores do Cliente"] || "").toLowerCase();
+        CATEGORIES.forEach(cat => {
+            if (cat.keywords.some(kw => text.includes(kw))) {
+                counts[cat.label] = (counts[cat.label] || 0) + 1;
+            }
+        });
+    });
+
+    return CATEGORIES.map(cat => ({
+        ...cat,
+        count: counts[cat.label] || 0
+    })).sort((a, b) => b.count - a.count);
+  }, [filteredData]);
+
   // Close dropdown on click outside
   useEffect(() => {
     function handleClickOutside(event) {
@@ -372,6 +397,39 @@ export default function AnalyticsPage() {
                        </div>
                     </div>
                   ))}
+                </div>
+             </div>
+
+             {/* Pain Categories Distribution */}
+             <div className="glass-card p-8 rounded-[3rem] border border-white/5 flex flex-col">
+                <h3 className="text-sm font-black text-white uppercase italic tracking-widest mb-6 w-full text-center flex items-center justify-center gap-2">
+                  <Target size={16} className="text-red-400" /> Dores Predominantes
+                </h3>
+                <div className="space-y-5 flex-1 flex flex-col justify-center">
+                    {painCategories.some(c => c.count > 0) ? (
+                        painCategories.map((cat, idx) => {
+                            const max = Math.max(...painCategories.map(c => c.count));
+                            const percent = (cat.count / max) * 100;
+                            return (
+                                <div key={idx} className="space-y-1.5">
+                                    <div className="flex justify-between items-center px-1">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{cat.label}</span>
+                                        <span className="text-[10px] font-black text-white">{cat.count}</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                        <div 
+                                            className={clsx("h-full transition-all duration-1000", cat.color)} 
+                                            style={{ width: `${percent}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <div className="text-center py-10 opacity-30 italic text-xs">
+                            Nenhuma dor mapeada no período
+                        </div>
+                    )}
                 </div>
              </div>
           </div>

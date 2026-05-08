@@ -859,12 +859,12 @@ export default function RelatoriosPage() {
     let objecoes = parseJSONSafely(row["principais_objecoes"] || row["Objeções"]) || [];
     if (!objecoes || objecoes.length === 0) objecoes = parseJSONSafely(row["ObjeÃ§Ãµes"]) || [];
 
-    const whitelist = ["BRUNO BORGES", "CARLOS SILVA", "GUSTAVO EMANUEL"];
+    const whitelist = ["BRUNO BORGES", "CARLOS SILVA", "GUSTAVO EMANUEL", "HENRIQUE", "CARLOS HENRIQUE"];
     const filteredIndices = [];
     const rankingArr = Array.isArray(ranking) ? ranking : Object.values(ranking);
     rankingArr.forEach((item, idx) => {
       const name = (item.nome || item.name || item.closer_nome || "").toString().toUpperCase().trim();
-      if (name && whitelist.some(w => name === w || name.includes(w))) filteredIndices.push(idx);
+      if (name && (whitelist.some(w => name === w || name.includes(w)) || whitelist.length === 0)) filteredIndices.push(idx);
     });
 
     const finalRanking = filteredIndices.map(idx => rankingArr[idx]);

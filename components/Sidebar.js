@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, Users, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight, Zap, Grid, Flame, FileBarChart, X } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight, Zap, Grid, Flame, FileBarChart, X, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -12,6 +12,7 @@ const MENU_ITEMS = [
   { icon: LayoutDashboard, label: "Histórico CS", id: "historico-cs", href: "/historico-cs", roles: ["CS"] },
   { icon: Grid, label: "Panorama", id: "panorama", href: "/panorama", roles: ["ADMIN"] },
   { icon: Flame, label: "Dores", id: "dores", href: "/dores", roles: ["ADMIN"] },
+  { icon: ShieldAlert, label: "Objeções", id: "objecoes", href: "/objecoes", roles: ["ADMIN"] },
   { icon: Users, label: "Closers", id: "closers", href: "/closers", roles: ["ADMIN"] },
   { icon: BarChart3, label: "Análise", id: "analytics", href: "/analise", roles: ["ADMIN"] },
   { icon: FileBarChart, label: "Relatórios", id: "relatorios", href: "/relatorios", roles: ["ADMIN"] },

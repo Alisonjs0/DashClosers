@@ -37,7 +37,7 @@ export default function PanoramaPage() {
     setModalOpen(true);
   };
 
-  const ALLOWED_CLOSERS = ["CARLOS SILVA", "GUSTAVO EMANUEL", "BRUNO BORGES"];
+  const ALLOWED_CLOSERS = ["CARLOS SILVA", "GUSTAVO EMANUEL", "BRUNO BORGES", "HENRIQUE"];
 
   const closers = useMemo(() => {
     return allClosers.filter(closer => ALLOWED_CLOSERS.includes(closer.toUpperCase().trim()));
