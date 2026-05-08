@@ -4,9 +4,9 @@ import { useState, useMemo, useEffect } from "react";
 import {
     X, Building2, User, Calendar, Database, ExternalLink, ShieldCheck,
     MousePointer2, Ban, Lightbulb, Mic2, Scale, FileText, Target, Activity, Award, Zap, Flame,
-    Copy, Check, Search
+    Copy, Check, Search, Clock
 } from "lucide-react";
-import { formatDateTime, SCORE_KEYS, parseScore } from "@/lib/utils";
+import { formatDateTime, SCORE_KEYS, parseScore, parseBant } from "@/lib/utils";
 import { clsx } from "clsx";
 
 const SCORE_ANALYSIS_MAP = {
@@ -143,6 +143,96 @@ const TranscriptRenderer = ({ text }) => {
 
                 return <p key={idx} className="text-slate-300 leading-relaxed mb-2 text-sm font-medium opacity-80">{cleanLine}</p>;
             })}
+        </div>
+    );
+};
+
+const BantSection = ({ data }) => {
+    const bant = parseBant(data);
+    if (!bant) return null;
+
+    const items = [
+        { key: "budget", label: "Budget", icon: <Database size={16} /> },
+        { key: "authority", label: "Authority", icon: <ShieldCheck size={16} /> },
+        { key: "need", label: "Need", icon: <Target size={16} /> },
+        { key: "timing", label: "Timing", icon: <Clock size={16} /> },
+    ];
+
+    return (
+        <div className="col-span-full space-y-6 mt-4 pt-8 border-t border-white/5">
+            <div className="flex items-center gap-4">
+                <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] whitespace-nowrap">Análise BANT</h4>
+                <div className="h-px w-full bg-gradient-to-r from-white/10 to-transparent" />
+                <div className="px-4 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black text-primary uppercase tracking-widest whitespace-nowrap">
+                    {bant.classificacaoLead}
+                </div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {items.map((item) => {
+                    const info = bant[item.key];
+                    if (!info) return null;
+                    
+                    const statusValue = info.qualificado || info.status;
+                    const statusColor = (statusValue === "Confirmado" || statusValue === "Sim") ? "text-emerald-400" : 
+                                      (statusValue === "Parcial") ? "text-amber-400" : "text-red-400";
+                    
+                    return (
+                        <div key={item.key} className="bg-white/[0.02] border border-white/5 p-5 rounded-[2rem] space-y-3 flex flex-col hover:bg-white/[0.04] transition-all">
+                            <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-2 text-primary">
+                                    <div className="p-1.5 bg-primary/10 rounded-lg border border-primary/20">
+                                        {item.icon}
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+                                </div>
+                                <span className={clsx(
+                                    "text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full bg-white/5 border border-white/10",
+                                    statusColor
+                                )}>
+                                    {statusValue}
+                                </span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 leading-relaxed italic flex-1">
+                                "{info.evidencia}"
+                            </p>
+                            {info.decisor && (
+                                <div className="pt-3 mt-1 border-t border-white/5">
+                                    <span className="text-[8px] font-black text-slate-500 uppercase block mb-1 opacity-60">Decisor</span>
+                                    <span className="text-[10px] font-bold text-slate-300">{info.decisor}</span>
+                                </div>
+                            )}
+                            {info.geradoPeloCloser !== undefined && (
+                                <div className="pt-3 mt-1 border-t border-white/5 flex items-center justify-between">
+                                    <span className="text-[8px] font-black text-slate-500 uppercase opacity-60">{item.key === 'timing' ? 'Senso de Urgência' : 'Gerado p/ Closer'}</span>
+                                    {info.geradoPeloCloser ? 
+                                        <div className="flex items-center gap-1 text-[9px] font-black text-emerald-400 uppercase tracking-tighter">
+                                            <Check size={10} /> Ativo
+                                        </div> : 
+                                        <div className="flex items-center gap-1 text-[9px] font-black text-slate-600 uppercase tracking-tighter">
+                                            <X size={10} /> Ausente
+                                        </div>
+                                    }
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            {bant.bantAnalise && (
+                <div className="bg-primary/5 border border-primary/10 p-6 rounded-[2rem] relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <Zap size={80} className="text-primary" />
+                    </div>
+                    <h5 className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                        <Zap size={12} /> Diagnóstico Estratégico
+                    </h5>
+                    <p className="text-sm text-slate-200 font-medium leading-relaxed italic relative z-10">
+                        {bant.bantAnalise}
+                    </p>
+                </div>
+            )}
         </div>
     );
 };
@@ -393,6 +483,7 @@ export default function CallDetailsModal({ isOpen, onClose, row }) {
                                         </div>
                                     )}
                                 </div>
+                                <BantSection data={row["Bant"]} />
                             </div>
                         )}
                     </div>

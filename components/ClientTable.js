@@ -1,7 +1,7 @@
 "use client";
 
-import { ExternalLink, Calendar, Building2, User, CheckCircle2, Clock, MoreHorizontal } from "lucide-react";
-import { formatDateTime, getAvgScore, parseScore } from "../lib/utils";
+import { ExternalLink, Calendar, Building2, User, CheckCircle2, Clock, MoreHorizontal, ShieldCheck } from "lucide-react";
+import { formatDateTime, getAvgScore, parseScore, parseBant } from "../lib/utils";
 
 function getStatusBadge(value) {
     const v = (value || "").toLowerCase();
@@ -29,6 +29,23 @@ function getStatusBadge(value) {
     return (
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20 text-[10px] font-bold uppercase tracking-wider">
             Perdido
+        </div>
+    );
+}
+
+function BantBadge({ value }) {
+    const bant = parseBant(value);
+    if (!bant) return <span className="text-slate-600 text-[10px]">—</span>;
+    
+    const classification = bant.classificacaoLead || "Não definido";
+    const colorClass = classification.toLowerCase().includes("quente") ? "text-red-400 bg-red-500/10 border-red-500/20" :
+                     classification.toLowerCase().includes("morno") ? "text-amber-400 bg-amber-500/10 border-amber-500/20" :
+                     classification.toLowerCase().includes("frio") ? "text-blue-400 bg-blue-500/10 border-blue-500/20" :
+                     "text-slate-400 bg-slate-500/10 border-slate-500/20";
+
+    return (
+        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${colorClass}`}>
+             {classification}
         </div>
     );
 }
@@ -77,6 +94,9 @@ export default function ClientTable({ data, onOpenModal, hideActions = false }) 
                             <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
                                 <div className="flex items-center gap-2"><User size={12} /> Closer</div>
                             </th>
+                            <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                                <div className="flex items-center gap-2"><ShieldCheck size={12} /> BANT</div>
+                            </th>
                             <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Status</th>
                             {!hideActions && <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 hidden lg:table-cell">Score</th>}
                             {!hideActions && <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 text-center">Ações</th>}
@@ -109,6 +129,9 @@ export default function ClientTable({ data, onOpenModal, hideActions = false }) 
                                             </div>
                                             <span className="text-xs font-semibold text-slate-300">{row["Closer"]}</span>
                                         </div>
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <BantBadge value={row["Bant"]} />
                                     </td>
                                     <td className="px-6 py-5">
                                         {getStatusBadge(row["Status"])}

@@ -9,7 +9,7 @@ import {
     Calendar, Building2, Flame,
     ChevronLeft, ChevronRight
 } from "lucide-react";
-import { formatDateTime, parseRowDate } from "@/lib/utils";
+import { formatDateTime, parseRowDate, isClosed } from "@/lib/utils";
 import { clsx } from "clsx";
 
 export default function HistoricoCS() {
