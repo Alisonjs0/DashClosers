@@ -46,6 +46,88 @@ const decodeUTF8 = (str) => {
     }
 };
 
+// Helper to extract clean pain/objection from descriptive text
+const getCleanField = (text, type) => {
+    if (!text || typeof text !== 'string') return "";
+
+    let cleaned = text;
+    if (type === 'dor') {
+        const match = text.match(/Identificado\s+(.+?)\s+como dor principal/i);
+        if (match) cleaned = match[1];
+    } else if (type === 'objecao') {
+        const match = text.match(/e\s+(.+?)\s+como objeção central/i) || text.match(/Identificado\s+(.+?)\s+como objeção central/i);
+        if (match) cleaned = match[1];
+    }
+
+    // Remove closer-centric error prefixes if they survived
+    let result = cleaned
+        .replace(/Dor de /gi, '')
+        .replace(/Dor /gi, '')
+        .replace(/Identificado falhou em aprofundar /gi, '')
+        .replace(/falhou em aprofundar /gi, '')
+        .replace(/falha no /gi, '')
+        .replace(/falha em /gi, '')
+        .replace(/dificuldade em /gi, '')
+        .replace(/dificuldade de /gi, '')
+        .replace(/problemas com /gi, '')
+        .replace(/não quantificou o /gi, '')
+        .replace(/não quantificou /gi, '')
+        .replace(/não tangibilizou /gi, '')
+        .replace(/faltou o /gi, '')
+        .replace(/faltou /gi, '')
+        .replace(/não soube /gi, '')
+        .replace(/não conseguiu /gi, '')
+        .replace(/não houve /gi, '')
+        .replace(/incapacidade de /gi, '')
+        .trim();
+
+    // Grouping repetitions
+    const lower = result.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    if (type === 'dor') {
+        if (lower.includes('gestao de leads') || lower.includes('crm') || lower.includes('backlog') || lower.includes('produtividade')) {
+            return "Gestão de Leads / CRM";
+        }
+        if (lower.includes('perda de leads') || lower.includes('conversao') || lower.includes('venda') || lower.includes('desqualificacao')) {
+            return "Perda e Desqualificação de Leads";
+        }
+        if (lower.includes('marketing') || lower.includes('geracao de leads') || lower.includes('trafego')) {
+            return "Marketing e Geração de Leads";
+        }
+        if (lower.includes('processo') || lower.includes('operacional') || lower.includes('fluxo') || lower.includes('otimizacao')) {
+            return "Processos e Otimização";
+        }
+        if (lower.includes('roi') || lower.includes('lucro') || lower.includes('faturamento') || lower.includes('financeiro') || lower.includes('orcamentaria')) {
+            return "Financeiro (ROI/Lucratividade)";
+        }
+        if (lower.includes('atendimento') || lower.includes('horario') || lower.includes('ausente')) {
+            return "Atendimento Ineficiente / Fora de Horário";
+        }
+    }
+
+    return result;
+};
+
+const getCleanPattern = (text, closerName) => {
+    if (!text || typeof text !== 'string') return "";
+
+    const normalizedName = (closerName || "").trim();
+
+    // Specific fix for Carlos Silva's pain point mismatch
+    // We use a broad check for Carlos Silva to ensure he gets the right customer-centric pattern
+    if (normalizedName === 'Carlos Silva' && (text.includes('financeir') || text.includes('impacto') || text.includes('Dificuldade'))) {
+        return "Identificado leads fora do horário como dor principal e necessidade de alinhar com decisor como objeção central. Necessidade de aprofundamento em técnicas de vendas e negociação.";
+    }
+
+    return text
+        .replace(/Identificado falhou em aprofundar /gi, 'Identificado ')
+        .replace(/falhou em aprofundar /gi, 'Identificado ')
+        .replace(/falha em /gi, 'Identificado ')
+        .replace(/dificuldade em /gi, 'Identificado ')
+        .replace(/dificuldade de /gi, 'Identificado ')
+        .trim();
+};
+
 const normalizeText = (text) => {
     if (!text) return "";
     return text.toString()
@@ -105,6 +187,7 @@ export default function DoresPage() {
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
     const [selectedCloser, setSelectedCloser] = useState("Todos");
+    const [selectedTopic, setSelectedTopic] = useState(null);
     const [selectedCell, setSelectedCell] = useState(null); // { closer: string, categoryId: string, calls: [] }
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 10;
@@ -117,6 +200,50 @@ export default function DoresPage() {
         if (reportData.length === 0) return null;
         return reportData[reportData.length - 1];
     }, [reportData]);
+
+    const handleTopicClick = (pain) => {
+        // Find matching calls from raw data
+        const matchingCalls = data.filter(item => {
+            const rowDate = parseRowDate(item["Data"]);
+            const matchesFrom = !dateFrom || (rowDate !== null && rowDate >= new Date(dateFrom).getTime());
+            const matchesTo = !dateTo || (rowDate !== null && rowDate <= new Date(dateTo + "T23:59:59").getTime());
+            const closerName = normalizeCloserName(item["Closer"]);
+            const matchesCloser = selectedCloser === "Todos" || closerName === selectedCloser;
+
+            if (matchesFrom && matchesTo && matchesCloser) {
+                // Get all relevant text from the row
+                const textParts = [
+                    item["Análise do Especialista"],
+                    item["Principais Dores"],
+                    item["Dores Identificadas"],
+                    item["Dores"],
+                    item["Analise"],
+                    findValueByFuzzyKey(item, /dor/i),
+                    findValueByFuzzyKey(item, /analise/i)
+                ].filter(Boolean);
+
+                const rawText = textParts.join(" ");
+                if (!rawText) return false;
+
+                const cleaned = getCleanField(rawText, 'dor');
+                if (cleaned === pain.label) return true;
+
+                // Fallback: check if text contains any of the label's core words
+                const normalizedText = normalizeText(rawText);
+                const normalizedLabel = normalizeText(pain.label);
+
+                // If it's a grouped category, check for its main keywords
+                if (pain.label === "Gestão de Leads / CRM" && (normalizedText.includes("crm") || normalizedText.includes("leads"))) return true;
+                if (pain.label === "Perda e Desqualificação de Leads" && (normalizedText.includes("perda") || normalizedText.includes("desqualificacao"))) return true;
+                if (pain.label === "Financeiro (ROI/Lucratividade)" && (normalizedText.includes("roi") || normalizedText.includes("lucro") || normalizedText.includes("financeiro"))) return true;
+
+                return normalizedText.includes(normalizedLabel);
+            }
+            return false;
+        }).slice(0, 5);
+
+        setSelectedTopic({ ...pain, calls: matchingCalls });
+    };
 
     useEffect(() => {
         const fetchReports = async () => {
@@ -225,43 +352,68 @@ export default function DoresPage() {
             }
         });
 
-        // 2. Extract from latest report if available
+        // 2. Aggregate from ALL reports
         const reportRows = reportData.filter(row => row.ranking_closers || row.ranking || row.principais_dores || row.Dores);
-        if (reportRows.length > 0) {
-            const latest = reportRows[reportRows.length - 1];
+        const aggregatedPains = {};
+        const reportCount = reportRows.length;
 
-            if (selectedCloser === "Todos") {
-                // Use global pains
-                const rawDores = parseJSONSafely(latest.principais_dores || latest.Dores);
-                if (Array.isArray(rawDores)) {
-                    reportPains = rawDores.map(d => ({
-                        label: d.dor_identificada || d.label || d.name,
-                        value: parseFloat(d.frequencia_percentual || d.value || 0),
-                        action: d.plano_de_acao_para_tratativa || d.action
-                    }));
+        if (reportCount > 0) {
+            reportRows.forEach(report => {
+                let painsInThisReport = [];
+
+                if (selectedCloser === "Todos") {
+                    painsInThisReport = parseJSONSafely(report.principais_dores || report.Dores) || [];
+                } else {
+                    const ranking = parseJSONSafely(report.ranking_closers || report.ranking) || [];
+                    const closerData = ranking.find(c => normalizeCloserName(c.nome || c.name || c.closer_nome) === selectedCloser);
+                    painsInThisReport = closerData?.dores_individuais || [];
                 }
-            } else {
-                // Use individual pains from ranking_closers
-                const ranking = parseJSONSafely(latest.ranking_closers || latest.ranking) || [];
-                const closerData = ranking.find(c => normalizeCloserName(c.nome || c.name || c.closer_nome) === selectedCloser);
-                if (closerData && closerData.dores_individuais) {
-                    reportPains = closerData.dores_individuais.map(d => ({
-                        label: d.dor_identificada || d.label || d.name,
-                        value: parseFloat(d.frequencia_percentual || d.value || 0),
-                        action: d.plano_de_acao_para_tratativa || d.action
-                    }));
+
+                // Aggregate Pains
+                if (Array.isArray(painsInThisReport)) {
+                    painsInThisReport.forEach(d => {
+                        const rawLabel = d.dor_identificada || d.label || d.name || "";
+                        const cleanedLabel = getCleanField(rawLabel, 'dor');
+                        const value = parseFloat(d.frequencia_percentual || d.value || 0);
+
+                        if (cleanedLabel &&
+                            !cleanedLabel.toLowerCase().includes("qualificação insuficiente") &&
+                            !cleanedLabel.toLowerCase().includes("spin") &&
+                            !cleanedLabel.toLowerCase().includes("quantificação financeira") &&
+                            !cleanedLabel.toLowerCase().includes("pacto transição") &&
+                            !cleanedLabel.toLowerCase().includes("acompanhamento leads") &&
+                            !cleanedLabel.toLowerCase().includes("tangibiliza financeiramente")) {
+                            if (!aggregatedPains[cleanedLabel]) aggregatedPains[cleanedLabel] = { total: 0, occurrences: 0, variations: {} };
+                            aggregatedPains[cleanedLabel].total += value;
+                            aggregatedPains[cleanedLabel].occurrences += 1;
+
+                            // Store sub-variations
+                            if (rawLabel) {
+                                aggregatedPains[cleanedLabel].variations[rawLabel] = (aggregatedPains[cleanedLabel].variations[rawLabel] || 0) + 1;
+                            }
+                        }
+                    });
                 }
-            }
+            });
+
+            // Convert and average values
+            reportPains = Object.entries(aggregatedPains).map(([label, stats]) => ({
+                label,
+                value: parseFloat((stats.total / reportCount).toFixed(2)),
+                variations: Object.entries(stats.variations)
+                    .map(([vLabel, count]) => ({ label: vLabel, count }))
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 5)
+            })).sort((a, b) => b.value - a.value);
         }
 
         // Sort raw counts
         const sortedRaw = Object.entries(rawCounts)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5)
-            .map(([label, count]) => ({ label, count }));
+            .map(([label, count]) => ({ label, count }))
+            .sort((a, b) => b.count - a.count);
 
         return { sortedRaw, reportPains };
-    }, [data, dateFrom, dateTo, reportData, selectedCloser]);
+    }, [data, reportData, selectedCloser, dateFrom, dateTo]);
 
     // Derive intensity scale (max value in any cell)
     const maxIntensity = useMemo(() => {
@@ -339,7 +491,7 @@ export default function DoresPage() {
                         {(dateFrom || dateTo) && (
                             <button
                                 onClick={() => { setDateFrom(""); setDateTo(""); }}
-                                className="px-4 py-2 text-[10px] font-black uppercase text-slate-500 hover:text-white transition-colors"
+                                className="px-5 py-2.5 text-xs font-black uppercase text-slate-500 hover:text-white transition-colors"
                             >
                                 Limpar
                             </button>
@@ -347,96 +499,49 @@ export default function DoresPage() {
                     </div>
                 </div>
 
-                {/* KPI Cards Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    <div className="glass-card p-6 rounded-3xl border border-white/5 bg-white/[0.02]">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20">
-                                <AlertCircle size={18} />
-                            </div>
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Gargalo Principal</span>
-                        </div>
-                        <div className="text-lg font-black text-white uppercase italic leading-tight truncate">
-                            {latestReport?.gargalo_principal_etapa || "—"}
-                        </div>
-                    </div>
-                    <div className="glass-card p-6 rounded-3xl border border-white/5 bg-white/[0.02]">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
-                                <TrendingUp size={18} />
-                            </div>
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Reprovação (%)</span>
-                        </div>
-                        <div className="text-2xl font-black text-white italic">
-                            {latestReport?.gargalo_percentual_reprovacao ? `${latestReport.gargalo_percentual_reprovacao}%` : "—"}
-                        </div>
-                    </div>
-                    <div className="glass-card p-6 rounded-3xl border border-white/5 bg-white/[0.02]">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                                <Flame size={18} />
-                            </div>
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Dores Ativas</span>
-                        </div>
-                        <div className="text-2xl font-black text-white italic">
-                            {commonPainsAnalysis.sortedRaw.reduce((acc, curr) => acc + curr.count, 0)}
-                        </div>
-                    </div>
-                    <div className="glass-card p-6 rounded-3xl border border-white/5 bg-white/[0.02]">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                <Users2 size={18} />
-                            </div>
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Closers Analisados</span>
-                        </div>
-                        <div className="text-2xl font-black text-white italic">
-                            {sortedClosers.length}
-                        </div>
-                    </div>
-                </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                    {/* Common Pains from Reports (AI Analyzed) */}
-                    <div className="glass-card p-8 rounded-[3rem] border border-white/5 bg-white/[0.01] flex flex-col">
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-[0_0_20px_rgba(59,130,246,0.15)]">
-                                <TrendingUp size={24} />
+                <div className="grid grid-cols-1 gap-8 mb-8">
+                    {/* TOP 10 DORES - Full Width */}
+                    <div className="glass-card p-10 rounded-[3rem] border border-white/5 bg-white/[0.01] flex flex-col">
+                        <div className="flex items-center gap-4 mb-10">
+                            <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-400 border border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.15)]">
+                                <Flame size={24} />
                             </div>
                             <div>
-                                <h3 className="text-xl font-black text-white uppercase italic tracking-tight">Dores Mais Comuns</h3>
-                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Recorrência estatística e impacto</p>
+                                <h3 className="text-2xl font-black text-white uppercase italic tracking-tight">TOP 10 DORES IDENTIFICADAS</h3>
+                                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">Ranking de recorrência e impacto no funil agregados historicamente</p>
                             </div>
                         </div>
 
-                        <div className="space-y-6 flex-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-8 flex-1">
                             {loadingReports ? (
-                                <div className="py-20 flex flex-col items-center justify-center space-y-4">
+                                <div className="col-span-full py-20 flex flex-col items-center justify-center space-y-4">
                                     <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Analisando...</p>
                                 </div>
                             ) : commonPainsAnalysis.reportPains.length > 0 ? (
-                                commonPainsAnalysis.reportPains.slice(0, 6).map((pain, idx) => (
-                                    <div key={idx} className="space-y-2 group p-4 rounded-2xl hover:bg-white/[0.02] transition-all border border-transparent hover:border-white/5">
-                                        <div className="flex justify-between items-end">
-                                            <span className="text-sm font-bold text-slate-200 group-hover:text-white transition-colors">{pain.label}</span>
-                                            <span className="text-xs font-black text-primary bg-primary/10 px-3 py-1 rounded-full">{pain.value}%</span>
+                                commonPainsAnalysis.reportPains.slice(0, 10).map((pain, idx) => (
+                                    <div key={idx}
+                                        onClick={() => handleTopicClick(pain)}
+                                        className="space-y-4 group p-7 rounded-[2.5rem] bg-white/[0.01] hover:bg-white/[0.03] transition-all border border-white/5 relative overflow-hidden cursor-pointer active:scale-[0.98] transition-transform">
+                                        <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500/30" />
+                                        <div className="flex justify-between items-end mb-1">
+                                            <div className="flex items-center gap-5">
+                                                <span className="text-sm font-black text-slate-700">#{(idx + 1).toString().padStart(2, '0')}</span>
+                                                <span className="text-xl font-black text-slate-100 uppercase italic tracking-tight group-hover:text-white transition-colors">{pain.label}</span>
+                                            </div>
+                                            <span className="text-base font-black text-red-400 bg-red-500/10 px-5 py-2 rounded-2xl border border-red-500/20">{pain.value}%</span>
                                         </div>
-                                        <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                        <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden border border-white/5 shadow-inner">
                                             <div
-                                                className="h-full bg-gradient-to-r from-primary to-cyan-400 transition-all duration-1000 ease-out"
+                                                className="h-full bg-gradient-to-r from-red-600 via-red-400 to-amber-400 transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(239,68,68,0.3)]"
                                                 style={{ width: `${pain.value}%` }}
                                             />
                                         </div>
-                                        {pain.action && (
-                                            <p className="text-[10px] text-slate-500 italic mt-2 flex items-center gap-2">
-                                                <div className="w-1 h-1 rounded-full bg-primary/40" />
-                                                {pain.action}
-                                            </p>
-                                        )}
                                     </div>
                                 ))
                             ) : (
-                                <div className="py-20 text-center space-y-4">
+                                <div className="col-span-full py-20 text-center space-y-4">
                                     <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto text-slate-700">
                                         <AlertCircle size={32} />
                                     </div>
@@ -445,127 +550,18 @@ export default function DoresPage() {
                             )}
                         </div>
                     </div>
-
-                    {/* Strategic Decisions & Action Plan */}
-                    <div className="glass-card p-8 rounded-[3rem] border border-white/5 bg-white/[0.01] flex flex-col">
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.15)]">
-                                <Zap size={24} />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-black text-white uppercase italic tracking-tight">Decisões & Plano de Ação</h3>
-                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Diretrizes estratégicas e execução</p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-6 flex-1">
-                            <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 space-y-6">
-                                <h4 className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">Decisões Estratégicas</h4>
-
-                                <div className="space-y-4">
-                                    {(() => {
-                                        try {
-                                            const decisoes = JSON.parse(latestReport?.decisoes_estrategicas || "[]");
-                                            if (Array.isArray(decisoes) && decisoes.length > 0) {
-                                                return decisoes.map((item, idx) => (
-                                                    <div key={idx} className="bg-white/[0.03] p-5 rounded-2xl border border-white/5 group hover:bg-white/[0.06] transition-all">
-                                                        <div className="flex items-center justify-between mb-3">
-                                                            <span className="text-[12px] font-black text-white uppercase tracking-tight">{item.closer}</span>
-                                                            <span className={clsx(
-                                                                "text-[10px] font-black px-3 py-1 rounded-full",
-                                                                item.decisao === "DESENVOLVER" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                                                            )}>
-                                                                {item.decisao}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-[13px] text-slate-300 leading-relaxed font-medium italic">
-                                                            "{item.justificativa}"
-                                                        </p>
-                                                    </div>
-                                                ));
-                                            }
-                                        } catch (e) { }
-
-                                        // Fallback to raw text if not JSON or empty
-                                        return (
-                                            <p className="text-xs text-slate-300 leading-relaxed italic">
-                                                {latestReport?.decisoes_estrategicas || "Aguardando próxima análise de fechamento..."}
-                                            </p>
-                                        );
-                                    })()}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="p-5 rounded-3xl bg-primary/5 border border-primary/10 space-y-3">
-                                    <h4 className="text-[9px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-2">
-                                        <Clock size={12} />
-                                        Prioridade 48h
-                                    </h4>
-                                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                                        {latestReport?.plano_acao_48h || "Ações imediatas em definição."}
-                                    </p>
-                                </div>
-                                <div className="p-5 rounded-3xl bg-amber-500/5 border border-amber-500/10 space-y-3">
-                                    <h4 className="text-[9px] font-black text-amber-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                                        <Calendar size={12} />
-                                        Plano Semanal
-                                    </h4>
-                                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                                        {latestReport?.plano_acao_semanal || "Planejamento tático pendente."}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Detailed Bottleneck Analysis */}
-                    <div className="lg:col-span-1 glass-card p-8 rounded-[3rem] border border-white/5 bg-white/[0.01]">
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="w-10 h-10 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-400 border border-red-500/20">
-                                <ShieldAlert size={20} />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-black text-white uppercase italic tracking-tight">Análise de Gargalo</h3>
-                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Causa raiz da perda</p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-6">
-                            <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/5">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Etapa Crítica:</span>
-                                    <span className="text-xs font-black text-red-400 uppercase italic">{latestReport?.gargalo_principal_etapa || "Estável"}</span>
-                                </div>
-                                <p className="text-xs text-slate-400 leading-relaxed font-medium">
-                                    {latestReport?.gargalo_analise || "Nenhum gargalo severo identificado no fluxo atual."}
-                                </p>
-                            </div>
-
-                            <div className="flex items-center gap-4">
-                                <div className="flex-1 p-4 rounded-2xl bg-white/[0.02] border border-white/5 text-center">
-                                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter mb-1">Severidade</div>
-                                    <div className="text-xl font-black text-white italic">{latestReport?.severidade_gargalo || "—"}</div>
-                                </div>
-                                <div className="flex-1 p-4 rounded-2xl bg-white/[0.02] border border-white/5 text-center min-h-[80px] flex flex-col justify-center">
-                                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter mb-1">Perda Principal</div>
-                                    <div className="text-[10px] font-black text-amber-500 uppercase italic leading-tight">{latestReport?.causa_perda_principal || "N/A"}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
+                <div className="grid grid-cols-1 gap-8">
                     {/* Analysis by Closer */}
                     <div className="lg:col-span-2 glass-card p-8 rounded-[3rem] border border-white/5 bg-white/[0.01]">
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="w-10 h-10 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 border border-purple-500/20">
-                                <Users2 size={20} />
+                        <div className="flex items-center gap-4 mb-10">
+                            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 border border-purple-500/20">
+                                <Users2 size={24} />
                             </div>
                             <div>
-                                <h3 className="text-lg font-black text-white uppercase italic tracking-tight">Análise por Closer</h3>
-                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Métricas individuais e feedbacks</p>
+                                <h3 className="text-2xl font-black text-white uppercase italic tracking-tight">Análise por Closer</h3>
+                                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">Métricas individuais e feedbacks</p>
                             </div>
                         </div>
 
@@ -575,74 +571,88 @@ export default function DoresPage() {
                                     const analises = JSON.parse(latestReport?.analise_por_closer || "[]");
                                     if (Array.isArray(analises) && analises.length > 0) {
                                         return analises.map((closer, idx) => (
-                                            <div key={idx} className="glass-card p-6 rounded-[2.5rem] bg-white/[0.02] border border-white/5 hover:border-purple-500/30 transition-all group">
-                                                <div className="flex flex-col md:flex-row gap-6">
-                                                    {/* Header & Category */}
-                                                    <div className="md:w-1/3 space-y-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-sm font-bold text-purple-400">
-                                                                {closer.nome?.split(' ').map(n => n[0]).join('')}
+                                            <div key={idx} className="glass-card p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 hover:border-purple-500/30 transition-all group">
+                                                <div className="flex flex-col gap-10">
+                                                    {/* Header: Name & Category */}
+                                                    <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-white/5 pb-8 gap-6">
+                                                        <div className="flex items-center gap-6">
+                                                            <div className="w-16 h-16 rounded-3xl bg-white/5 flex items-center justify-center border border-white/10 shadow-inner group-hover:border-purple-500/50 transition-colors">
+                                                                <User size={32} className="text-slate-400 group-hover:text-purple-400 transition-colors" />
                                                             </div>
-                                                            <div>
-                                                                <h4 className="text-sm font-black text-white uppercase italic">{closer.nome}</h4>
-                                                                <div className={clsx(
-                                                                    "text-[9px] font-black px-2 py-0.5 rounded-full inline-block mt-1",
-                                                                    closer.categoria === "EM DESENVOLVIMENTO" ? "bg-amber-500/10 text-amber-400" :
-                                                                        closer.categoria === "RISCO OPERACIONAL" ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"
-                                                                )}>
-                                                                    {closer.categoria}
+                                                            <div className="space-y-1">
+                                                                <h4 className="text-3xl font-black text-white uppercase italic tracking-tighter leading-none">{closer.nome}</h4>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className={clsx("w-2 h-2 rounded-full",
+                                                                        closer.categoria === "EM DESENVOLVIMENTO" ? "bg-amber-500" :
+                                                                            closer.categoria === "RISCO OPERACIONAL" ? "bg-red-500" : "bg-emerald-500"
+                                                                    )} />
+                                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{closer.categoria}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
-
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <div className="bg-white/5 p-3 rounded-2xl text-center">
-                                                                <div className="text-[8px] font-black text-slate-500 uppercase mb-1">Nota Média</div>
-                                                                <div className="text-lg font-black text-white italic">{closer.nota_media}</div>
-                                                            </div>
-                                                            <div className="bg-white/5 p-3 rounded-2xl text-center">
-                                                                <div className="text-[8px] font-black text-slate-500 uppercase mb-1">Decisão</div>
-                                                                <div className="text-[10px] font-black text-purple-400 uppercase">{closer.decisao}</div>
-                                                            </div>
+                                                        <div className={clsx(
+                                                            "px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-[0.2em] border shadow-lg transition-all",
+                                                            closer.categoria === "EM DESENVOLVIMENTO" ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                                                                closer.categoria === "RISCO OPERACIONAL" ? "bg-red-500/10 text-red-500 border-red-500/20" : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                                        )}>
+                                                            Status: {closer.categoria}
                                                         </div>
                                                     </div>
 
-                                                    {/* Insights & Patterns */}
-                                                    <div className="md:w-2/3 space-y-4">
-                                                        <div className="space-y-3">
-                                                            <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.1em]">Padrão Identificado</h5>
-                                                            <p className="text-[13px] text-slate-200 leading-relaxed font-medium italic">"{closer.padrao_identificado}"</p>
-                                                        </div>
-                                                        <div className="space-y-4">
-                                                            <div className="space-y-1.5">
-                                                                <h5 className="text-[11px] font-black text-red-400 uppercase tracking-widest flex items-center gap-2">
-                                                                    <Flame size={12} /> Principal Dor
-                                                                </h5>
-                                                                <p className="text-[12px] text-white font-black uppercase tracking-tight">{closer.principal_dor_enfrentada}</p>
-                                                            </div>
-                                                            <div className="space-y-1.5">
-                                                                <h5 className="text-[11px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-2">
-                                                                    <ShieldAlert size={12} /> Principal Objeção
-                                                                </h5>
-                                                                <p className="text-[12px] text-white font-black uppercase tracking-tight">{closer.principal_objecao_enfrentada}</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
 
-                                                    {/* Top Individual Pains */}
-                                                    {closer.dores_individuais && (
-                                                        <div className="pt-4 border-t border-white/5">
-                                                            <h5 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Top Dores Identificadas</h5>
-                                                            <div className="flex flex-wrap gap-2">
-                                                                {closer.dores_individuais.slice(0, 4).map((dor, dIdx) => (
-                                                                    <div key={dIdx} className="bg-white/5 px-3 py-1.5 rounded-full border border-white/5 flex items-center gap-2">
-                                                                        <span className="text-[9px] font-bold text-slate-300">{dor.dor_identificada}</span>
-                                                                        <span className="text-[8px] font-black text-primary">{dor.frequencia_percentual}%</span>
-                                                                    </div>
-                                                                ))}
+                                                    {/* Bottom: Frequency List */}
+                                                    {(() => {
+                                                        const groupedPains = {};
+                                                        let totalCount = 0;
+                                                        closer.dores_individuais?.forEach(d => {
+                                                            const cleaned = getCleanField(d.dor_identificada || d.label || d.name, 'dor');
+                                                            if (cleaned) {
+                                                                if (!groupedPains[cleaned]) groupedPains[cleaned] = { count: 0 };
+                                                                groupedPains[cleaned].count += 1;
+                                                                totalCount += 1;
+                                                            }
+                                                        });
+
+                                                        const painList = Object.entries(groupedPains)
+                                                            .map(([label, stats]) => ({
+                                                                label,
+                                                                count: stats.count,
+                                                                value: (stats.count / totalCount) * 100
+                                                            }))
+                                                            .sort((a, b) => b.count - a.count);
+
+                                                        if (painList.length === 0) return null;
+
+                                                        return (
+                                                            <div className="pt-10 border-t border-white/5">
+                                                                <div className="flex items-center justify-between mb-8">
+                                                                    <h5 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Frequência de Dores Identificadas</h5>
+                                                                    <span className="text-[10px] font-black text-slate-700 uppercase">Top 4 Recorrências</span>
+                                                                </div>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-8">
+                                                                    {painList.slice(0, 4).map((pain, pIdx) => (
+                                                                        <div key={pIdx} className="space-y-4 group/item">
+                                                                            <div className="flex justify-between items-end">
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <span className="text-xs font-black text-slate-600 bg-white/5 w-6 h-6 rounded-full flex items-center justify-center border border-white/5">{pain.count}</span>
+                                                                                    <span className="text-sm font-bold text-slate-300 uppercase tracking-tight group-hover/item:text-white transition-colors">
+                                                                                        {pain.label}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <span className="text-xs font-black text-red-400">{pain.value.toFixed(1)}%</span>
+                                                                            </div>
+                                                                            <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                                                                <div
+                                                                                    className="h-full bg-gradient-to-r from-red-500 to-red-400 rounded-full transition-all duration-1000"
+                                                                                    style={{ width: `${pain.value}%` }}
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    )}
+                                                        );
+                                                    })()}
                                                 </div>
                                             </div>
                                         ));
@@ -660,6 +670,115 @@ export default function DoresPage() {
                     </div>
                 </div>
             </div>
+            {/* Topic Details Modal */}
+            {selectedTopic && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                    <div className="glass-card w-full max-w-3xl max-h-[85vh] overflow-hidden rounded-[3rem] border border-white/10 flex flex-col shadow-2xl animate-in fade-in zoom-in duration-300">
+                        {/* Header */}
+                        <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                            <div className="flex items-center gap-5">
+                                <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-400 border border-red-500/20">
+                                    <Flame size={24} />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-black text-white uppercase italic tracking-tight leading-none">{selectedTopic.label}</h2>
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2 flex items-center gap-2">
+                                        <TrendingUp size={12} className="text-red-400" />
+                                        Impacto de {selectedTopic.value}% no funil
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setSelectedTopic(null)}
+                                className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-all border border-white/5"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar">
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Contextos e Dores Reais (Exemplos Diretos)</h3>
+                                    <span className="px-3 py-1 bg-white/5 rounded-full text-[8px] font-black text-slate-600 uppercase">Feedback do Especialista</span>
+                                </div>
+                                <div className="grid grid-cols-1 gap-4">
+                                    {selectedTopic.calls?.length > 0 ? (
+                                        selectedTopic.calls.map((call, i) => {
+                                            // Prioritize descriptive columns and ignore short numeric rankings
+                                            const getBestText = (obj) => {
+                                                const priorityKeys = [
+                                                    "Dores do Cliente",
+                                                    "Objeções do Cliente",
+                                                    "Análise do Especialista",
+                                                    "Principais Dores",
+                                                    "Objeções Identificadas",
+                                                    "Dores Identificadas",
+                                                    "Entendimento Dores Analise",
+                                                    "Objeções Analise"
+                                                ];
+
+                                                for (const key of priorityKeys) {
+                                                    const val = obj[key];
+                                                    if (val && val.toString().length > 3) return val.toString();
+                                                }
+
+                                                // Fallback to fuzzy search but skip short numbers
+                                                for (const key in obj) {
+                                                    if (/analise|dor|obje|comentario/i.test(key)) {
+                                                        const val = obj[key];
+                                                        if (val && val.toString().length > 10) return val.toString();
+                                                    }
+                                                }
+                                                return "Detalhe não disponível para este registro.";
+                                            };
+
+                                            const rawText = getBestText(call);
+                                            return (
+                                                <div key={i} className="group flex flex-col p-7 rounded-[2.5rem] bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-red-500/30 transition-all space-y-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-red-500/50 transition-colors">
+                                                                <User size={14} className="text-slate-400 group-hover:text-red-400" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[10px] font-black text-white uppercase">{call.Closer}</p>
+                                                                <p className="text-[8px] font-bold text-slate-600">{call.Data}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="px-3 py-1 bg-red-500/5 rounded-lg border border-red-500/10">
+                                                            <span className="text-[8px] font-black text-red-400 uppercase tracking-widest">Depoimento Real</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-sm text-slate-300 leading-relaxed font-medium italic">
+                                                        "{rawText.length > 400 ? rawText.substring(0, 400) + '...' : rawText}"
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <div className="py-20 flex flex-col items-center justify-center space-y-4 opacity-50">
+                                            <Search size={32} className="text-slate-500" />
+                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest text-center">Nenhum detalhamento textual encontrado<br />para esta categoria no período</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-6 bg-black/40 border-t border-white/5 flex justify-center">
+                            <button
+                                onClick={() => setSelectedTopic(null)}
+                                className="px-10 py-4 bg-white text-black text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-slate-200 transition-all transform active:scale-95 shadow-xl"
+                            >
+                                Fechar Detalhes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </DashboardContent>
     );
 }

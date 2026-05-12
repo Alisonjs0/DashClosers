@@ -4,9 +4,10 @@ import { useDashboardContext } from "@/lib/contexts/DashboardContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
+import { clsx } from "clsx";
 
 export default function AuthGuard({ children }) {
-  const { user } = useDashboardContext();
+  const { user, isSidebarCollapsed } = useDashboardContext();
   const router = useRouter();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
@@ -47,7 +48,10 @@ export default function AuthGuard({ children }) {
   return (
     <div className="flex min-h-screen relative w-full overflow-hidden bg-[#020617] m-0 p-0">
       <Sidebar />
-      <main className="flex-1 transition-all duration-300 ml-0 md:ml-64 relative z-10 w-full min-w-0 bg-[#020617] p-0 m-0">
+      <main className={clsx(
+        "flex-1 transition-all duration-500 relative z-10 w-full min-w-0 bg-[#020617] p-0 m-0",
+        isSidebarCollapsed ? "md:ml-20" : "md:ml-64"
+      )}>
         <div className="w-full h-full p-0 m-0 animate-fade-in flex flex-col">
           {children}
         </div>
